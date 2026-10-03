@@ -3,276 +3,160 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Debatr — Платформа для тренировки дебатов и анализа речи с ИИ</title>
-  <meta name="description" content="Интеллектуальная веб-платформа с ИИ (GPT-6 Luna) и Supabase для тренировки навыков дебатов, анализа аргументации и обратной связи по рубрике 0-9.">
+  <title>Debatr</title>
   
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
-  <!-- Supabase JS Client (CDN - легко подключается без сборщиков) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-
-  <!-- Header / Navigation -->
+  <!-- Minimal Header -->
   <header class="site-header">
     <div class="header-container">
       <div class="brand">
-        <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="22"/>
-          </svg>
-        </div>
-        <div class="brand-text">
-          <span class="brand-name">Debatr</span>
-          <span class="brand-badge">AI Research</span>
-        </div>
+        <span class="brand-name">Debatr</span>
       </div>
 
       <nav class="nav-links">
-        <button class="nav-btn active" data-tab="arena" id="nav-arena">
-          <span class="btn-icon">⚡</span> Тренажёр
-        </button>
-        <button class="nav-btn" data-tab="dashboard" id="nav-dashboard">
-          <span class="btn-icon">📊</span> Кабинет тренера
-        </button>
-        <button class="nav-btn" data-tab="rubric" id="nav-rubric">
-          <span class="btn-icon">📐</span> Рубрика (0–9)
-        </button>
-        <button class="nav-btn" data-tab="about" id="nav-about">
-          <span class="btn-icon">ℹ️</span> О проекте
-        </button>
+        <button class="nav-btn active" data-tab="arena" id="nav-arena">Тренажёр</button>
+        <button class="nav-btn" data-tab="dashboard" id="nav-dashboard">Кабинет</button>
+        <button class="nav-btn" data-tab="rubric" id="nav-rubric">Рубрика</button>
+        <button class="nav-btn" data-tab="about" id="nav-about">О проекте</button>
       </nav>
 
-      <div class="header-actions">
-        <button class="btn-settings" id="btn-open-settings" title="Настройки API (Supabase & GPT-6 Luna)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-          <span class="settings-label">Стек & API</span>
-        </button>
-      </div>
+      <button class="btn-settings" id="btn-open-settings" title="Настройки API">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>API</span>
+      </button>
     </div>
   </header>
 
-  <!-- Main Content Layout -->
   <main class="main-container">
 
-    <!-- ================= TAB 1: PRACTICE ARENA ================= -->
+    <!-- ================= TAB 1: PRACTICE ================= -->
     <section id="tab-arena" class="tab-content active-tab">
       
-      <!-- Arena Hero / Controls -->
-      <div class="arena-header">
-        <div class="arena-intro">
-          <div class="tech-pill">
-            <span class="pulse-dot"></span> Движок: <strong>GPT-6 Luna</strong> &bull; Бэкенд: <strong>Supabase</strong>
-          </div>
-          <h1 class="page-title">Интерактивный тренажёр дебатных речей</h1>
-          <p class="page-subtitle">
-            Выберите фокусное упражнение, тему дебатов и сформулируйте вашу речь. ИИ проведёт моментальный разбор по 5 критериям международной рубрики.
-          </p>
-        </div>
-
-        <div class="exercise-selector-card">
-          <span class="selector-label">Выберите тип упражнения:</span>
-          <div class="pill-group" id="exercise-types">
-            <button class="pill-btn active" data-type="claim">🎯 1. Тезис (Claim)</button>
-            <button class="pill-btn" data-type="warrant">🔗 2. Обоснование (Warrant)</button>
-            <button class="pill-btn" data-type="rebuttal">🛡️ 3. Опровержение (Rebuttal)</button>
-            <button class="pill-btn" data-type="speech">🎙️ 4. Полная речь (Speech)</button>
-          </div>
-        </div>
+      <!-- Pills -->
+      <div class="pill-group" id="exercise-types">
+        <button class="pill-btn active" data-type="claim">Тезис</button>
+        <button class="pill-btn" data-type="warrant">Обоснование</button>
+        <button class="pill-btn" data-type="rebuttal">Опровержение</button>
+        <button class="pill-btn" data-type="speech">Полная речь</button>
       </div>
 
-      <!-- Workspace Grid -->
+      <!-- Arena Grid -->
       <div class="arena-grid">
         
-        <!-- Left Column: Input Form -->
+        <!-- Input Side -->
         <div class="glass-card arena-input-card">
-          
-          <div class="card-section">
-            <div class="section-title-row">
-              <label for="topic-select" class="field-label">Резолюция (Тема раунда):</label>
-              <button class="btn-text-action" id="btn-random-topic" title="Выбрать случайную тему">🎲 Случайная тема</button>
-            </div>
-            <div class="topic-box" id="current-topic-box">
-              <span class="topic-tag">WUDC / BP Format</span>
-              <p class="topic-text" id="topic-display">ЭП считает, что развитие автономных систем искусственного интеллекта должно жестко лицензироваться международным регулятором.</p>
-            </div>
+          <div class="topic-row">
+            <p class="topic-text" id="topic-display">ЭП считает, что развитие автономных систем искусственного интеллекта должно жестко лицензироваться международным регулятором.</p>
+            <button class="btn-icon-only" id="btn-random-topic" title="Сменить тему">🎲</button>
           </div>
 
-          <div class="card-section" id="context-section">
-            <div class="context-banner" id="exercise-tip">
-              <strong>🎯 Подсказка к упражнению:</strong>
-              <span id="tip-text">Сформулируйте ясный, однозначный и сильный тезис в пользу резолюции или против неё без лишней "воды".</span>
-            </div>
-          </div>
+          <textarea 
+            id="speech-input" 
+            class="speech-textarea" 
+            placeholder="Напишите аргумент..."
+            rows="7"
+          ></textarea>
 
-          <div class="card-section">
-            <div class="section-title-row">
-              <label for="speech-input" class="field-label">Ваша речь / ответ:</label>
-              <div class="text-stats">
-                <span id="word-count">0 слов</span> &bull; 
-                <span id="char-count">0 символов</span>
-              </div>
-            </div>
-
-            <textarea 
-              id="speech-input" 
-              class="speech-textarea" 
-              placeholder="Начните писать вашу аргументацию здесь... (например: 'Мы утверждаем, что бесконтрольное обучение моделей создаёт экзистенциальный риск монополизации технологий, так как...')"
-              rows="8"
-            ></textarea>
-          </div>
-
-          <!-- Bottom Action Bar -->
           <div class="card-footer-row">
             <div class="quick-samples">
-              <span class="samples-label">Вставить пример:</span>
-              <button class="btn-sample" id="btn-sample-strong">⭐ Сильный аргумент</button>
-              <button class="btn-sample" id="btn-sample-weak">⚠️ Слабый аргумент</button>
+              <button class="btn-sample" id="btn-sample-strong">Пример (сильный)</button>
+              <button class="btn-sample" id="btn-sample-weak">Пример (слабый)</button>
+              <span class="text-stats" id="word-count">0 слов</span>
             </div>
 
             <button class="btn-primary" id="btn-analyze">
-              <span class="btn-glow"></span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-              </svg>
-              <span>Запустить анализ GPT-6 Luna</span>
+              Анализ
             </button>
           </div>
         </div>
 
-        <!-- Right Column: AI Feedback Panel -->
+        <!-- Feedback Side -->
         <div class="glass-card arena-feedback-card" id="feedback-panel">
           
-          <!-- Empty / Idle State -->
           <div class="empty-state" id="feedback-empty">
-            <div class="empty-icon-wrapper">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-            </div>
-            <h3 class="empty-title">Ожидание выступления</h3>
-            <p class="empty-desc">
-              Напишите ваш аргумент слева или нажмите «Вставить пример», затем нажмите кнопку анализа, чтобы получить мгновенную оценку по критериям.
-            </p>
+            <p class="empty-desc">Напишите аргумент и нажмите «Анализ»</p>
           </div>
 
-          <!-- Loading State -->
           <div class="loading-state hidden" id="feedback-loading">
             <div class="ai-orb-spinner"></div>
-            <h3 class="loading-title">GPT-6 Luna анализирует аргументацию...</h3>
-            <p class="loading-desc">Проверяем структуру логики, силу доказательств и релевантность критериям рубрики.</p>
+            <p class="loading-desc">Оценка аргумента...</p>
           </div>
 
-          <!-- Results State -->
           <div class="results-container hidden" id="feedback-results">
             
             <div class="results-header">
-              <div class="score-badge-cluster">
-                <div class="overall-score-box">
-                  <span class="score-label">Band Score</span>
-                  <span class="score-number" id="res-overall-score">7.5</span>
-                  <span class="score-max">/ 9.0</span>
-                </div>
-                <div class="score-meta">
-                  <span class="meta-level" id="res-level-tag">Продвинутый уровень</span>
-                  <span class="meta-sub">Human-in-the-Loop: требует подтверждения наставником</span>
-                </div>
+              <div class="overall-score-box">
+                <span class="score-number" id="res-overall-score">7.5</span>
+                <span class="score-max">/ 9.0</span>
               </div>
+              <span class="meta-level" id="res-level-tag">Продвинутый</span>
 
-              <button class="btn-secondary" id="btn-save-supabase" title="Сохранить попытку в базу данных Supabase">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/>
-                  <polyline points="7 3 7 8 15 8"/>
-                </svg>
-                <span id="save-status-text">В Supabase</span>
+              <button class="btn-secondary" id="btn-save-supabase">
+                <span id="save-status-text">Сохранить</span>
               </button>
             </div>
 
-            <!-- Rubric 5 Dimensions Progress Bars -->
             <div class="rubric-bars-list">
-              
               <div class="rubric-bar-item">
                 <div class="bar-header">
-                  <span class="bar-name">1. Argument Structure (Логика и тезис)</span>
-                  <span class="bar-score" id="score-structure">7.5 / 9</span>
+                  <span>Логика и структура</span>
+                  <span id="score-structure">7.5</span>
                 </div>
-                <div class="bar-track">
-                  <div class="bar-fill" id="fill-structure" style="width: 83%;"></div>
-                </div>
+                <div class="bar-track"><div class="bar-fill" id="fill-structure"></div></div>
               </div>
 
               <div class="rubric-bar-item">
                 <div class="bar-header">
-                  <span class="bar-name">2. Evidence Quality (Доказательства и факты)</span>
-                  <span class="bar-score" id="score-evidence">7.0 / 9</span>
+                  <span>Доказательства</span>
+                  <span id="score-evidence">7.0</span>
                 </div>
-                <div class="bar-track">
-                  <div class="bar-fill" id="fill-evidence" style="width: 77%;"></div>
-                </div>
+                <div class="bar-track"><div class="bar-fill" id="fill-evidence"></div></div>
               </div>
 
               <div class="rubric-bar-item">
                 <div class="bar-header">
-                  <span class="bar-name">3. Rebuttal Effectiveness (Опровержение)</span>
-                  <span class="bar-score" id="score-rebuttal">8.0 / 9</span>
+                  <span>Опровержение</span>
+                  <span id="score-rebuttal">8.0</span>
                 </div>
-                <div class="bar-track">
-                  <div class="bar-fill" id="fill-rebuttal" style="width: 88%;"></div>
-                </div>
+                <div class="bar-track"><div class="bar-fill" id="fill-rebuttal"></div></div>
               </div>
 
               <div class="rubric-bar-item">
                 <div class="bar-header">
-                  <span class="bar-name">4. Clarity & Coherence (Ясность и связность)</span>
-                  <span class="bar-score" id="score-clarity">7.5 / 9</span>
+                  <span>Ясность речи</span>
+                  <span id="score-clarity">7.5</span>
                 </div>
-                <div class="bar-track">
-                  <div class="bar-fill" id="fill-clarity" style="width: 83%;"></div>
-                </div>
+                <div class="bar-track"><div class="bar-fill" id="fill-clarity"></div></div>
               </div>
 
               <div class="rubric-bar-item">
                 <div class="bar-header">
-                  <span class="bar-name">5. Originality & Insight (Глубина и импакт)</span>
-                  <span class="bar-score" id="score-originality">7.5 / 9</span>
+                  <span>Глубина мысли</span>
+                  <span id="score-originality">7.5</span>
                 </div>
-                <div class="bar-track">
-                  <div class="bar-fill" id="fill-originality" style="width: 83%;"></div>
-                </div>
+                <div class="bar-track"><div class="bar-fill" id="fill-originality"></div></div>
               </div>
-
             </div>
 
-            <!-- Detailed Coach Comments from GPT-6 Luna -->
             <div class="ai-feedback-sections">
               <div class="feedback-block block-positive">
-                <div class="block-title">
-                  <span>✅ Сильные стороны аргумента:</span>
-                </div>
-                <p id="res-strengths" class="block-text">
-                  Четко обозначена причинно-следственная связь между отсутствием лицензирования и риском монополизации. Выделен понятный стейкхолдер.
-                </p>
+                <span class="block-title">Сильная сторона:</span>
+                <p id="res-strengths" class="block-text"></p>
               </div>
-
               <div class="feedback-block block-needs-work">
-                <div class="block-title">
-                  <span>💡 Точки роста и рекомендации тренера:</span>
-                </div>
-                <p id="res-improvements" class="block-text">
-                  Рекомендуется усилить сравнительный анализ (comparative): почему именно международный регулятор сработает лучше национального законодательства.
-                </p>
+                <span class="block-title">Рекомендация:</span>
+                <p id="res-improvements" class="block-text"></p>
               </div>
             </div>
 
@@ -283,238 +167,118 @@
       </div>
     </section>
 
-
-    <!-- ================= TAB 2: COACH DASHBOARD ================= -->
+    <!-- ================= TAB 2: COACH ================= -->
     <section id="tab-dashboard" class="tab-content">
-      <div class="dashboard-header">
-        <div>
-          <h1 class="page-title">Панель наставника клуба (Coach Hub)</h1>
-          <p class="page-subtitle">
-            Мониторинг самостоятельных тренировок, синхронизация с Supabase и проверка оценок ИИ.
-          </p>
-        </div>
-        <div class="dashboard-actions">
-          <button class="btn-secondary" id="btn-refresh-data">
-            🔄 Обновить данные
-          </button>
-        </div>
-      </div>
-
-      <!-- Stats Grid -->
       <div class="stats-row">
         <div class="stat-card">
           <span class="stat-num" id="stat-total-speeches">14</span>
-          <span class="stat-title">Всего тренировок</span>
-          <span class="stat-badge positive">+6 за эту неделю</span>
+          <span class="stat-title">Тренировок</span>
         </div>
         <div class="stat-card">
           <span class="stat-num" id="stat-avg-score">7.2</span>
-          <span class="stat-title">Средний балл клуба (0-9)</span>
-          <span class="stat-badge neutral">Стабильный рост</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-num">Evidence</span>
-          <span class="stat-title">Тема для очного разбора</span>
-          <span class="stat-badge warning">Нужна практика фактов</span>
+          <span class="stat-title">Средний балл (0-9)</span>
         </div>
         <div class="stat-card">
           <span class="stat-num">93%</span>
-          <span class="stat-title">Согласованность с ИИ</span>
-          <span class="stat-badge positive">Inter-rater reliability</span>
+          <span class="stat-title">Согласованность с наставником</span>
         </div>
       </div>
 
-      <!-- Recent Speeches Table -->
       <div class="glass-card table-card">
-        <div class="table-header-row">
-          <h3>Последние сессии практики (Таблица из Supabase)</h3>
-          <span class="table-subtitle">Нажмите «Проверить», чтобы скорректировать оценку в качестве наставника</span>
-        </div>
-
         <div class="table-responsive">
           <table class="debatr-table">
             <thead>
               <tr>
-                <th>Дата</th>
                 <th>Дебатер</th>
-                <th>Тип упражнения</th>
+                <th>Тип</th>
                 <th>Тема</th>
-                <th>Оценка ИИ</th>
-                <th>Статус тренера</th>
-                <th>Действие</th>
+                <th>Балл</th>
+                <th>Статус</th>
+                <th></th>
               </tr>
             </thead>
-            <tbody id="speeches-table-body">
-              <!-- Dynamically populated or default rows -->
-            </tbody>
+            <tbody id="speeches-table-body"></tbody>
           </table>
         </div>
       </div>
     </section>
 
-
     <!-- ================= TAB 3: RUBRIC ================= -->
     <section id="tab-rubric" class="tab-content">
-      <div class="rubric-page-header">
-        <h1 class="page-title">Рубрика оценивания Debatr (Шкала 0.0 – 9.0)</h1>
-        <p class="page-subtitle">
-          Стандартизированная 5-факторная система критериев для объективной оценки речей дебатеров человеком и нейросетью.
-        </p>
-      </div>
-
       <div class="rubric-grid">
-        
         <div class="glass-card rubric-detail-card">
-          <div class="rubric-icon">🏗️</div>
-          <h3>1. Argument Structure</h3>
-          <p class="rubric-desc">Логика и последовательность построения доводов.</p>
-          <ul class="rubric-points">
-            <li><strong>8.0 – 9.0 (Expert):</strong> Безупречная структура: тезис, глубокая цепочка аргументов, явный импакт и связь с резолюцией.</li>
-            <li><strong>6.0 – 7.5 (Competent):</strong> Логика понятна, аргумент закончен, но переход между звеньями может быть упрощён.</li>
-            <li><strong>0.0 – 5.5 (Developing):</strong> Тезис заявлен, но обоснование сводится к повторению утверждения без логических доказательств.</li>
-          </ul>
+          <h3>1. Argument Structure (0–9)</h3>
+          <p class="rubric-desc">Логика, структура тезиса и причинно-следственная связь.</p>
         </div>
-
         <div class="glass-card rubric-detail-card">
-          <div class="rubric-icon">📊</div>
-          <h3>2. Evidence Quality</h3>
-          <p class="rubric-desc">Уместность, достоверность и глубина доказательств.</p>
-          <ul class="rubric-points">
-            <li><strong>8.0 – 9.0 (Expert):</strong> Приведены точные примеры, проверенные аналогии и статистика с глубоким объяснением контекста.</li>
-            <li><strong>6.0 – 7.5 (Competent):</strong> Примеры уместные, но носят общий характер без детального анализа влияния.</li>
-            <li><strong>0.0 – 5.5 (Developing):</strong> Примеры отсутствуют или носят характер слухов / абстрактных предположений.</li>
-          </ul>
+          <h3>2. Evidence Quality (0–9)</h3>
+          <p class="rubric-desc">Факты, достоверные примеры и обоснованность данных.</p>
         </div>
-
         <div class="glass-card rubric-detail-card">
-          <div class="rubric-icon">⚔️</div>
-          <h3>3. Rebuttal Effectiveness</h3>
-          <p class="rubric-desc">Эффективность контраргументации и ответ оппоненту.</p>
-          <ul class="rubric-points">
-            <li><strong>8.0 – 9.0 (Expert):</strong> Атака ключевой предпосылки соперника (clash of the debate), минимизация чужого импакта.</li>
-            <li><strong>6.0 – 7.5 (Competent):</strong> Ответ на вторичные тезисы соперника без разрушения основного фундамента речи.</li>
-            <li><strong>0.0 – 5.5 (Developing):</strong> Простое несогласие («они неправы») без встречных доводов.</li>
-          </ul>
+          <h3>3. Rebuttal Effectiveness (0–9)</h3>
+          <p class="rubric-desc">Разбор аргумента соперника и выявление уязвимостей.</p>
         </div>
-
         <div class="glass-card rubric-detail-card">
-          <div class="rubric-icon">🗣️</div>
-          <h3>4. Clarity & Coherence</h3>
-          <p class="rubric-desc">Ясность формулировок, культура речи и связность.</p>
-          <ul class="rubric-points">
-            <li><strong>8.0 – 9.0 (Expert):</strong> Точный словарный запас, безупречные речевые переходы, убедительная риторическая подача.</li>
-            <li><strong>6.0 – 7.5 (Competent):</strong> Мысль выражена ясно, небольшие заминки или шероховатости в формулировках.</li>
-            <li><strong>0.0 – 5.5 (Developing):</strong> Трудности с формулированием сложных мыслей, обилие слов-паразитов.</li>
-          </ul>
+          <h3>4. Clarity & Coherence (0–9)</h3>
+          <p class="rubric-desc">Ясность формулировок, связность и культура речи.</p>
         </div>
-
         <div class="glass-card rubric-detail-card">
-          <div class="rubric-icon">💡</div>
-          <h3>5. Originality & Insight</h3>
-          <p class="rubric-desc">Глубина анализа и оригинальность мысли.</p>
-          <ul class="rubric-points">
-            <li><strong>8.0 – 9.0 (Expert):</strong> Уникальный угол зрения, раскрытие неочевидных последствий решения для уязвимых групп.</li>
-            <li><strong>6.0 – 7.5 (Competent):</strong> Стандартные аргументы для данной темы, раскрытые качественно и уверенно.</li>
-            <li><strong>0.0 – 5.5 (Developing):</strong> Поверхностные стереотипные рассуждения первого уровня.</li>
-          </ul>
+          <h3>5. Originality & Insight (0–9)</h3>
+          <p class="rubric-desc">Глубина анализа, нестандартный угол и итоговый импакт.</p>
         </div>
-
       </div>
     </section>
-
 
     <!-- ================= TAB 4: ABOUT ================= -->
     <section id="tab-about" class="tab-content">
       <div class="about-container glass-card">
-        <h2>Научно-исследовательский проект «Debatr»</h2>
-        <p class="lead-text">
-          Разработка веб-платформы с искусственным интеллектом для анализа речи и тренировки навыков дебатов.
-        </p>
-
-        <div class="meta-info-grid">
-          <div class="meta-card">
-            <span class="meta-label">Автор проекта</span>
-            <span class="meta-val">Ихлас Мұстафа</span>
-            <span class="meta-sub">10 «А» класс</span>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Научный руководитель</span>
-            <span class="meta-val">Ақан Маратович</span>
-            <span class="meta-sub">Наставник дебатного клуба</span>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Стек технологий</span>
-            <span class="meta-val">HTML5 &bull; CSS3 &bull; JS</span>
-            <span class="meta-sub">Supabase + GPT-6 Luna</span>
-          </div>
-        </div>
-
-        <div class="research-summary">
-          <h3>Почему выбран именно такой стек?</h3>
-          <p>
-            Для школьного научного проекта критически важно, чтобы архитектура оставалась прозрачной, надежной и легко объяснимой перед жюри:
-          </p>
-          <ul>
-            <li><strong>Чистый веб-стек (HTML + CSS + JavaScript):</strong> Никаких громоздких сторонних фреймворков и лишних зависимостей. Код полностью открыт, понятен и быстро компилируется.</li>
-            <li><strong>База данных Supabase:</strong> Надежное облачное PostgreSQL хранилище для сохранения тренировок, истории прогресса учеников и оценок тренера.</li>
-            <li><strong>Модель GPT-6 Luna:</strong> Специализированный промпт-инжиниринг с привязкой к жесткой рубрике 0.0–9.0 для беспристрастной и конструктивной обратной связи.</li>
-            <li><strong>Human-in-the-Loop:</strong> ИИ выступает ассистентом, помогающим готовиться дома, но решающее слово всегда за живым наставником.</li>
-          </ul>
+        <div class="meta-row">
+          <div><strong>Автор:</strong> Ихлас Мұстафа (10 «А»)</div>
+          <div><strong>Руководитель:</strong> Ақан Маратович</div>
+          <div><strong>Стек:</strong> HTML, CSS, JavaScript, Supabase, GPT-6 Luna</div>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- ================= SETTINGS & API MODAL ================= -->
+  <!-- Settings Modal -->
   <div class="modal-overlay hidden" id="settings-modal">
     <div class="glass-card modal-card">
       <div class="modal-header">
-        <h3>Параметры стека (Supabase & GPT-6 Luna)</h3>
+        <h3>Подключение API</h3>
         <button class="modal-close" id="btn-close-settings">&times;</button>
       </div>
 
       <div class="modal-body">
-        <p class="modal-desc">
-          Проект работает сразу «из коробки» в интерактивном <strong>Демо-режиме</strong> (с локальным хранилищем и интеллектуальной симуляцией рубрики). Вы можете указать реальные ключи Supabase и API, когда будете готовы:
-        </p>
-
         <div class="form-group">
-          <label class="form-label" for="supabase-url">Supabase Project URL:</label>
-          <input type="text" id="supabase-url" class="form-input" placeholder="https://xyzcompany.supabase.co">
+          <label class="form-label" for="supabase-url">Supabase URL:</label>
+          <input type="text" id="supabase-url" class="form-input">
         </div>
-
         <div class="form-group">
           <label class="form-label" for="supabase-key">Supabase Anon Key:</label>
-          <input type="password" id="supabase-key" class="form-input" placeholder="eyJhGciOi... (public anon key)">
+          <input type="password" id="supabase-key" class="form-input">
         </div>
-
         <div class="form-group">
-          <label class="form-label" for="ai-api-key">OpenAI / Luna API Key (Опционально):</label>
-          <input type="password" id="ai-api-key" class="form-input" placeholder="sk-proj-...">
+          <label class="form-label" for="ai-api-key">API Key (OpenAI):</label>
+          <input type="password" id="ai-api-key" class="form-input">
         </div>
-
         <div class="form-group">
-          <label class="form-label" for="ai-mode-select">Движок анализа:</label>
+          <label class="form-label" for="ai-mode-select">Режим:</label>
           <select id="ai-mode-select" class="form-input">
-            <option value="luna-sim">GPT-6 Luna (Встроенный алгоритмический движок рубрики 0-9)</option>
-            <option value="live-api">Прямой API (OpenAI / Luna Endpoint)</option>
+            <option value="luna-sim">Встроенный движок GPT-6 Luna</option>
+            <option value="live-api">Прямой API</option>
           </select>
-        </div>
-
-        <div class="notice-box">
-          ℹ️ При деплое на <strong>Vercel</strong> статические файлы разворачиваются автоматически. Переменные окружения можно также указать в панели Vercel.
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="btn-secondary" id="btn-reset-settings">Сбросить</button>
-        <button class="btn-primary" id="btn-save-settings">Сохранить настройки</button>
+        <button class="btn-secondary" id="btn-reset-settings">Сброс</button>
+        <button class="btn-primary" id="btn-save-settings">Сохранить</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification System -->
   <div class="toast hidden" id="toast"></div>
 
   <script src="app.js"></script>

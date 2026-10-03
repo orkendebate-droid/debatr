@@ -214,8 +214,8 @@ function initExerciseSelector() {
 
 function updateExerciseUI() {
   const config = EXERCISE_CONFIG[currentExerciseType];
-  exerciseTipText.textContent = config.tip;
-  speechInput.placeholder = config.placeholder;
+  if (exerciseTipText) exerciseTipText.textContent = config.tip;
+  if (speechInput) speechInput.placeholder = config.placeholder;
   updateStats();
 }
 
@@ -243,8 +243,8 @@ function updateStats() {
   const words = text ? text.split(/\s+/).length : 0;
   const chars = text.length;
 
-  wordCountEl.textContent = `${words} ${pluralize(words, ['слово', 'слова', 'слов'])}`;
-  charCountEl.textContent = `${chars} симв.`;
+  if (wordCountEl) wordCountEl.textContent = `${words} ${pluralize(words, ['слово', 'слова', 'слов'])}`;
+  if (charCountEl) charCountEl.textContent = `${chars} симв.`;
 }
 
 function pluralize(n, forms) {
