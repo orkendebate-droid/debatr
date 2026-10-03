@@ -138,6 +138,8 @@ const btnSaveSettings = document.getElementById('btn-save-settings');
 const btnResetSettings = document.getElementById('btn-reset-settings');
 const inputSupabaseUrl = document.getElementById('supabase-url');
 const inputSupabaseKey = document.getElementById('supabase-key');
+const inputAiApiKey = document.getElementById('ai-api-key');
+const selectAiMode = document.getElementById('ai-mode-select');
 
 // Dashboard elements
 const speechesTableBody = document.getElementById('speeches-table-body');
@@ -288,17 +290,88 @@ function initAnalyzeButton() {
     feedbackResults.classList.add('hidden');
     feedbackLoading.classList.remove('hidden');
 
-    // Simulate AI Latency
+    const apiKey = localStorage.getItem('debatr_ai_key');
+    const aiMode = localStorage.getItem('debatr_ai_mode') || 'luna-sim';
+
+    if (aiMode === 'live-api' && apiKey) {
+      try {
+        const evaluation = await callOpenAiRubric(text, currentExerciseType, topicDisplay.textContent, apiKey);
+        renderEvaluation(evaluation);
+        feedbackLoading.classList.add('hidden');
+        feedbackResults.classList.remove('hidden');
+        showToast("Прямой анализ GPT-6 Luna успешно завершён!");
+        return;
+      } catch (err) {
+        console.warn("Live API error, falling back to Luna engine:", err);
+      }
+    }
+
+    // Simulate AI Latency with Luna Engine
     setTimeout(() => {
       const evaluation = evaluateSpeechWithLuna(text, currentExerciseType, topicDisplay.textContent);
       renderEvaluation(evaluation);
       feedbackLoading.classList.add('hidden');
       feedbackResults.classList.remove('hidden');
       showToast("Анализ GPT-6 Luna успешно завершён!");
-    }, 1400);
+    }, 1200);
   });
 
   btnSaveSupabase.addEventListener('click', saveToSupabase);
+}
+
+async function callOpenAiRubric(text, type, topic, apiKey) {
+  const prompt = `Ты строгий судья и тренер дебатов. Оцени аргумент по 5 критериям международной дебатной рубрики (шкала 0.0 - 9.0, шаг 0.5):
+1. Argument Structure (логика, тезис, причинно-следственная связь)
+2. Evidence Quality (факты, аналогии, доказательства)
+3. Rebuttal Effectiveness (опровержение оппонента)
+4. Clarity & Coherence (ясность, культура речи)
+5. Originality & Insight (глубина мысли, импакт)
+
+Тема дебатов: "${topic}"
+Тип упражнения: "${type}"
+Текст речи: "${text}"
+
+Верни строго JSON объект без markdown кавычек:
+{
+  "overall": 7.5,
+  "scores": {
+    "structure": 7.5,
+    "evidence": 7.0,
+    "rebuttal": 8.0,
+    "clarity": 7.5,
+    "originality": 7.5
+  },
+  "strengths": "Кратко сильные стороны (2 предложения)",
+  "improvements": "Кратко рекомендации по улучшению (2 предложения)"
+}`;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3
+    })
+  });
+
+  if (!response.ok) throw new Error("OpenAI request failed");
+  const data = await response.json();
+  const raw = data.choices[0].message.content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
+  const parsed = JSON.parse(raw);
+
+  return {
+    overall: parsed.overall,
+    scores: parsed.scores,
+    strengths: parsed.strengths,
+    improvements: parsed.improvements,
+    text,
+    type,
+    topic
+  };
 }
 
 /**
@@ -401,7 +474,7 @@ function renderEvaluation(evalData) {
     resLevelTag.style.color = "var(--accent-emerald)";
   } else if (evalData.overall >= 6.5) {
     resLevelTag.textContent = "Уровень: Продвинутый (Band 6.5–7.5)";
-    resLevelTag.style.color = "var(--primary-light)";
+    resLevelTag.style.color = "var(--accent-blue)";
   } else {
     resLevelTag.textContent = "Уровень: Развивающийся (Band < 6.0)";
     resLevelTag.style.color = "var(--accent-amber)";
@@ -440,8 +513,8 @@ async function saveToSupabase() {
   saveStatusText.textContent = "Сохранение...";
   btnSaveSupabase.disabled = true;
 
-  const supabaseUrl = localStorage.getItem('debatr_supabase_url');
-  const supabaseKey = localStorage.getItem('debatr_supabase_key');
+  const supabaseUrl = localStorage.getItem('debatr_supabase_url') || 'https://gefremoxoxwobgeptobm.supabase.co';
+  const supabaseKey = localStorage.getItem('debatr_supabase_key') || 'sb_publishable_k6JsncQUI3BePKqDhDNGOA_f4zcESvO';
 
   const newEntry = {
     id: Date.now(),
@@ -574,12 +647,19 @@ function initSettingsModal() {
   btnSaveSettings.addEventListener('click', () => {
     const url = inputSupabaseUrl.value.trim();
     const key = inputSupabaseKey.value.trim();
+    const aiKey = inputAiApiKey.value.trim();
+    const aiMode = selectAiMode.value;
 
     if (url) localStorage.setItem('debatr_supabase_url', url);
     else localStorage.removeItem('debatr_supabase_url');
 
     if (key) localStorage.setItem('debatr_supabase_key', key);
     else localStorage.removeItem('debatr_supabase_key');
+
+    if (aiKey) localStorage.setItem('debatr_ai_key', aiKey);
+    else localStorage.removeItem('debatr_ai_key');
+
+    localStorage.setItem('debatr_ai_mode', aiMode);
 
     settingsModal.classList.add('hidden');
     showToast("Настройки стека успешно сохранены!");
@@ -588,15 +668,24 @@ function initSettingsModal() {
   btnResetSettings.addEventListener('click', () => {
     localStorage.removeItem('debatr_supabase_url');
     localStorage.removeItem('debatr_supabase_key');
-    inputSupabaseUrl.value = '';
-    inputSupabaseKey.value = '';
-    showToast("Настройки сброшены на встроенный демо-режим");
+    localStorage.removeItem('debatr_ai_key');
+    localStorage.removeItem('debatr_ai_mode');
+    inputSupabaseUrl.value = 'https://gefremoxoxwobgeptobm.supabase.co';
+    inputSupabaseKey.value = 'sb_publishable_k6JsncQUI3BePKqDhDNGOA_f4zcESvO';
+    inputAiApiKey.value = '';
+    selectAiMode.value = 'luna-sim';
+    showToast("Настройки сброшены на стандартные параметры");
   });
 }
 
 function loadStoredSettings() {
-  const url = localStorage.getItem('debatr_supabase_url');
-  const key = localStorage.getItem('debatr_supabase_key');
-  if (url) inputSupabaseUrl.value = url;
-  if (key) inputSupabaseKey.value = key;
+  const url = localStorage.getItem('debatr_supabase_url') || 'https://gefremoxoxwobgeptobm.supabase.co';
+  const key = localStorage.getItem('debatr_supabase_key') || 'sb_publishable_k6JsncQUI3BePKqDhDNGOA_f4zcESvO';
+  const aiKey = localStorage.getItem('debatr_ai_key') || '';
+  const aiMode = localStorage.getItem('debatr_ai_mode') || 'luna-sim';
+
+  inputSupabaseUrl.value = url;
+  inputSupabaseKey.value = key;
+  inputAiApiKey.value = aiKey;
+  selectAiMode.value = aiMode;
 }
