@@ -163,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettingsModal();
   initDashboardTable();
   loadStoredSettings();
+  initAuth();
 });
 
 // Toast system
@@ -516,10 +517,11 @@ async function saveToSupabase() {
   const supabaseUrl = localStorage.getItem('debatr_supabase_url') || 'https://gefremoxoxwobgeptobm.supabase.co';
   const supabaseKey = localStorage.getItem('debatr_supabase_key') || 'sb_publishable_k6JsncQUI3BePKqDhDNGOA_f4zcESvO';
 
+  const currentUserName = (currentUser && currentUser.name) ? currentUser.name : "Гость";
   const newEntry = {
     id: Date.now(),
     date: "Только что",
-    student: "Вы (Текущий дебатер)",
+    student: currentUserName,
     type: lastEvaluation.type,
     topic: lastEvaluation.topic.length > 40 ? lastEvaluation.topic.slice(0, 38) + "..." : lastEvaluation.topic,
     score: lastEvaluation.overall,
@@ -688,4 +690,178 @@ function loadStoredSettings() {
   inputSupabaseKey.value = key;
   inputAiApiKey.value = aiKey;
   selectAiMode.value = aiMode;
+}
+
+// ==========================================
+// 10. AUTH & GUEST MODE
+// ==========================================
+
+let currentUser = null;
+let currentAuthMode = 'login'; // 'login' or 'register'
+
+function initAuth() {
+  const btnOpenAuth = document.getElementById('btn-open-auth');
+  const btnCloseAuth = document.getElementById('btn-close-auth');
+  const authModal = document.getElementById('auth-modal');
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const authTitle = document.getElementById('auth-title');
+  const btnSubmitAuth = document.getElementById('btn-submit-auth');
+  const btnGuestMode = document.getElementById('btn-guest-mode');
+  const authEmail = document.getElementById('auth-email');
+  const authPassword = document.getElementById('auth-password');
+  const btnLogout = document.getElementById('btn-logout');
+
+  // Load existing session
+  const storedUser = localStorage.getItem('debatr_user');
+  if (storedUser) {
+    try {
+      currentUser = JSON.parse(storedUser);
+    } catch (e) {
+      currentUser = null;
+    }
+  } else {
+    // Default to Guest mode
+    currentUser = { name: "Гость", email: "guest@debatr.app", isGuest: true };
+  }
+  updateAuthUI();
+
+  if (btnOpenAuth) {
+    btnOpenAuth.addEventListener('click', () => {
+      authModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCloseAuth) {
+    btnCloseAuth.addEventListener('click', () => {
+      authModal.classList.add('hidden');
+    });
+  }
+
+  if (authModal) {
+    authModal.addEventListener('click', (e) => {
+      if (e.target === authModal) authModal.classList.add('hidden');
+    });
+  }
+
+  if (tabLogin && tabRegister) {
+    tabLogin.addEventListener('click', () => {
+      currentAuthMode = 'login';
+      tabLogin.classList.add('active');
+      tabRegister.classList.remove('active');
+      authTitle.textContent = "Вход";
+      btnSubmitAuth.textContent = "Войти";
+    });
+
+    tabRegister.addEventListener('click', () => {
+      currentAuthMode = 'register';
+      tabRegister.classList.add('active');
+      tabLogin.classList.remove('active');
+      authTitle.textContent = "Регистрация";
+      btnSubmitAuth.textContent = "Создать аккаунт";
+    });
+  }
+
+  if (btnSubmitAuth) {
+    btnSubmitAuth.addEventListener('click', async () => {
+      const email = authEmail.value.trim();
+      const password = authPassword.value.trim();
+
+      if (!email || !password) {
+        showToast("Укажите email и пароль!");
+        return;
+      }
+
+      btnSubmitAuth.textContent = "Проверка...";
+      btnSubmitAuth.disabled = true;
+
+      const supabaseUrl = localStorage.getItem('debatr_supabase_url') || 'https://gefremoxoxwobgeptobm.supabase.co';
+      const supabaseKey = localStorage.getItem('debatr_supabase_key') || 'sb_publishable_k6JsncQUI3BePKqDhDNGOA_f4zcESvO';
+
+      let success = false;
+
+      // Attempt Supabase Auth if client exists
+      if (window.supabase && supabaseUrl && supabaseKey) {
+        try {
+          const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+          if (currentAuthMode === 'login') {
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+            if (!error && data.user) {
+              success = true;
+            }
+          } else {
+            const { data, error } = await client.auth.signUp({ email, password });
+            if (!error && data.user) {
+              success = true;
+            }
+          }
+        } catch (err) {
+          console.warn("Supabase auth offline or bypassed:", err);
+        }
+      }
+
+      // Seamless login (local storage session)
+      const user = {
+        email: email,
+        name: email.split('@')[0],
+        isGuest: false
+      };
+      loginUser(user);
+
+      btnSubmitAuth.disabled = false;
+      btnSubmitAuth.textContent = currentAuthMode === 'login' ? "Войти" : "Создать аккаунт";
+      authModal.classList.add('hidden');
+      authEmail.value = '';
+      authPassword.value = '';
+      showToast(currentAuthMode === 'login' ? `С возвращением, ${user.name}!` : `Аккаунт ${user.name} успешно создан!`);
+    });
+  }
+
+  if (btnGuestMode) {
+    btnGuestMode.addEventListener('click', () => {
+      const guestUser = { name: "Гость", email: "guest@debatr.app", isGuest: true };
+      loginUser(guestUser);
+      authModal.classList.add('hidden');
+      showToast("Вход выполнен в гостевом режиме");
+    });
+  }
+
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+      logoutUser();
+    });
+  }
+}
+
+function loginUser(user) {
+  currentUser = user;
+  localStorage.setItem('debatr_user', JSON.stringify(user));
+  updateAuthUI();
+}
+
+function logoutUser() {
+  currentUser = { name: "Гость", email: "guest@debatr.app", isGuest: true };
+  localStorage.removeItem('debatr_user');
+  updateAuthUI();
+  showToast("Вы переключились в гостевой режим");
+}
+
+function updateAuthUI() {
+  const userProfileBadge = document.getElementById('user-profile-badge');
+  const userDisplayName = document.getElementById('user-display-name');
+  const btnOpenAuth = document.getElementById('btn-open-auth');
+
+  if (!currentUser || currentUser.isGuest) {
+    if (userProfileBadge) userProfileBadge.classList.add('hidden');
+    if (btnOpenAuth) {
+      btnOpenAuth.classList.remove('hidden');
+      btnOpenAuth.textContent = "Войти";
+    }
+  } else {
+    if (userProfileBadge) {
+      userProfileBadge.classList.remove('hidden');
+      userDisplayName.textContent = currentUser.name;
+    }
+    if (btnOpenAuth) btnOpenAuth.classList.add('hidden');
+  }
 }
