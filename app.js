@@ -1388,10 +1388,11 @@ async function generateAiOpeningSpeech(topic, role = 'gov') {
   if (!apiKey) return generateFallbackOpeningSpeech(topic);
 
   const persona = PERSONA_CONFIGS[selectedPersona] || PERSONA_CONFIGS.novice;
-  const prompt = `Ты спикер дебатов GPT-6 Luna (Палата Правительства).
+  const prompt = `Ты спикер дебатов GPT-6 Luna (${role === 'gov' ? 'Палата Правительства' : 'Палата Оппозиции'}).
 Резолюция: "${topic}".
-Уровень: ${persona.name}.
-КРАТКОСТЬ: Напиши строго 2-3 коротких предложения (до 40-50 слов). Тезис, доказательство и импакт. Без лишних слов и вступительных фраз. На русском языке.`;
+Стиль: ${persona.stylePrompt || 'убедительный, живой, точный'}.
+
+Произнеси вступительную речь: емко обозначь ключевой тезис, довод и сравнительный импакт.`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1425,16 +1426,14 @@ async function generateAiOpponentSpeech(userSpeech, topic, userRole) {
 
   const recentDialog = battleDialogueHistory.slice(-4).map(m => (m.role === 'user' ? 'Оппонент: ' : 'GPT-6 Luna: ') + m.text).join('\n');
 
-  const prompt = `Ты спикер дебатов высшего класса GPT-6 Luna (${opponentRoleName}).
+  const prompt = `Ты опытный спикер дебатов GPT-6 Luna (${opponentRoleName}).
 Резолюция: "${topic}".
-Уровень: ${persona.name}.
+Стиль: ${persona.stylePrompt || 'убедительный, живой, точный'}.
 
-Речь оппонента: "${userSpeech}"
+Аргумент оппонента:
+"${userSpeech}"
 
-ПРАВИЛО КРАТКОСТИ: Ответь СТРОГО 2-3 короткими, емкими предложениями (до 40-50 слов).
-1. Четко укажи на уязвимость в логике оппонента.
-2. Приведи встречный тезис с импактом.
-Запрещено лить воду, делать длинные вступления и писать много текста. Отвечай хлёстко и по существу.`;
+Ответь как дебатер: живо, емко и по существу, сразу парируя аргумент соперника.`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1447,7 +1446,7 @@ async function generateAiOpponentSpeech(userSpeech, topic, userRole) {
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 120
+        max_tokens: 160
       })
     });
 
