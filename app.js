@@ -1502,11 +1502,11 @@ async function handleBattleJudgeCall() {
   document.getElementById('battle-analysis-strengths').textContent = verdictData.strengths;
   document.getElementById('battle-analysis-advice').textContent = verdictData.advice;
 
-  // Add to History and update Radar
+  // Add to local history and update Radar
   speechesHistory.unshift({
     id: Date.now(),
     date: "Сегодня",
-    student: (currentUser && !currentUser.isGuest) ? currentUser.name : "Дебатер",
+    student: (currentUser && !currentUser.isGuest) ? currentUser.name : "Гость",
     type: "battle",
     topic: topic.slice(0, 45) + "...",
     score: verdictData.overall,
@@ -1515,7 +1515,37 @@ async function handleBattleJudgeCall() {
 
   initDashboardTable();
   updateRadarFromHistory();
-  showToast("Вердикт готов");
+
+  // If registered debater, synchronize to Supabase cloud account
+  if (currentUser && !currentUser.isGuest) {
+    const supabaseUrl = localStorage.getItem('debatr_supabase_url') || 'https://gefremoxoxwobgeptobm.supabase.co';
+    const supabaseKey = localStorage.getItem('debatr_supabase_key') || 'sb_publishable_k6JsncQUI3BePKqDhDNGOA_f4zcESvO';
+    if (window.supabase && supabaseUrl && supabaseKey) {
+      try {
+        const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+        client.from('speeches').insert([{
+          student_name: currentUser.name,
+          exercise_type: 'battle',
+          topic: topic,
+          content: userSpeeches,
+          overall_score: verdictData.overall,
+          scores: verdictData.scores,
+          created_at: new Date().toISOString()
+        }]).then(() => {
+          showToast(`Вердикт готов. Результат сохранен в аккаунт ${currentUser.name}`);
+        }).catch(err => {
+          console.warn("Supabase battle auto-save error:", err);
+          showToast("Вердикт готов");
+        });
+      } catch (_) {
+        showToast("Вердикт готов");
+      }
+    } else {
+      showToast("Вердикт готов");
+    }
+  } else {
+    showToast("Вердикт готов (Гостевой режим: раунд не сохранен в аккаунт)");
+  }
 }
 
 async function judgeBattleWithAI(userSpeech, aiSpeech, topic, userRole) {
