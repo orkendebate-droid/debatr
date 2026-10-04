@@ -221,13 +221,7 @@
 
 ## Список использованной литературы
 
-1. Тлеукабылулы О. Шипагерлик баян. – Алматы : Жалын, 1996. – 460 с.
-2. Toulmin S.E. The Uses of Argument. – Updated ed. – Cambridge : Cambridge University Press, 2003. – 262 p.
-3. Freeley A.J., Steinberg D.L. Argumentation and Debate: Critical Thinking for Reasoned Decision Making. – 13th ed. – Boston : Wadsworth, 2013. – 544 p.
-4. Meany J., Shuster K. Art, Argument, and Advocacy: Mastering Parliamentary Debate. – New York : International Debate Education Association, 2002. – 320 p.
-5. Brown T.B. et al. Language Models are Few-Shot Learners // Advances in Neural Information Processing Systems (NeurIPS). – 2020. – Vol. 33. – P. 1877–1901.
-6. Hattie J., Timperley H. The Power of Feedback // Review of Educational Research. – 2007. – Vol. 77. – No. 1. – P. 81–112.
-7. Международный формат дебатов Карла Поппера и Парламентский формат: методическое пособие / под ред. Е.А. Дмитриева. – Астана : Дарын, 2019. – 128 с.
-8. Russell S., Norvig P. Artificial Intelligence: A Modern Approach. – 4th ed. – Pearson, 2020. – 1166 p.
-9. UNESCO. Guidance for generative AI in education and research. – Paris : UNESCO Publishing, 2023. – 44 p.
-10. Арыстанова Н.Э., Бекмырза А.Т. Цифровые инструменты формирования речевой компетенции // Вестник КазНУ. Серия педагогическая. – 2022. – Т. 71. – №2. – С. 40–49.
+1. Дмитриев Е.А. Парламентский формат дебатов: методическое пособие для школьных клубов. – Астана : Дарын, 2021. – 96 с.
+2. Toulmin S.E. The Uses of Argument. – Cambridge : Cambridge University Press, 2003. – 262 p.
+3. UNESCO. Руководство по генеративному искусственному интеллекту в образовании и исследованиях. – ЮНЕСКО, 2023. – 44 с.
+4. MDN Web Docs. Web Speech API: интерфейсы распознавания и синтеза речи. – Mozilla Developer Network, 2024. [Электронный ресурс].
