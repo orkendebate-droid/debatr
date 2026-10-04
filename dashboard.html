@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debatr — Личный кабинет и аналитика</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <div class="brand">
+        <a href="index.html" style="text-decoration:none; color:inherit;" class="brand-name">Debatr</a>
+      </div>
+
+      <nav class="nav-links">
+        <a href="index.html" class="nav-btn">Баттл</a>
+        <a href="rooms.html" class="nav-btn">1 на 1</a>
+        <a href="dashboard.html" class="nav-btn active">Кабинет</a>
+      </nav>
+
+      <div class="header-right">
+        <div id="user-profile-badge" class="user-badge hidden">
+          <span id="user-display-name">Гость</span>
+          <button id="btn-logout" class="btn-text-tiny">Выйти</button>
+        </div>
+        <button class="btn-secondary btn-sm" id="btn-open-auth">Вход</button>
+        <button class="btn-settings" id="btn-open-settings" title="Настройки API">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-num" id="stat-total-speeches">0</span>
+        <span class="stat-title">Раундов</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-avg-score">0.0</span>
+        <span class="stat-title">Средний балл</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">0%</span>
+        <span class="stat-title">Согласованность</span>
+      </div>
+    </div>
+
+    <!-- Radar Chart & Competencies Row -->
+    <div class="dashboard-analytics-grid">
+      <div class="glass-card chart-card">
+        <div class="chart-header">
+          <h3>Компетенции</h3>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas id="competencyRadarCanvas" width="340" height="280"></canvas>
+        </div>
+      </div>
+
+      <div class="glass-card radar-meta-card">
+        <h3>Навыки</h3>
+        <div class="skill-meter-list" id="skills-meter-list">
+          <div class="skill-meter-item">
+            <div class="meter-info"><span>Структура</span><strong id="radar-val-str">0.0</strong></div>
+            <div class="bar-track"><div class="bar-fill" id="radar-fill-str" style="width: 0%;"></div></div>
+          </div>
+          <div class="skill-meter-item">
+            <div class="meter-info"><span>Факты</span><strong id="radar-val-evi">0.0</strong></div>
+            <div class="bar-track"><div class="bar-fill" id="radar-fill-evi" style="width: 0%;"></div></div>
+          </div>
+          <div class="skill-meter-item">
+            <div class="meter-info"><span>Опровержение</span><strong id="radar-val-reb">0.0</strong></div>
+            <div class="bar-track"><div class="bar-fill" id="radar-fill-reb" style="width: 0%;"></div></div>
+          </div>
+          <div class="skill-meter-item">
+            <div class="meter-info"><span>Ясность</span><strong id="radar-val-cla">0.0</strong></div>
+            <div class="bar-track"><div class="bar-fill" id="radar-fill-cla" style="width: 0%;"></div></div>
+          </div>
+          <div class="skill-meter-item">
+            <div class="meter-info"><span>Глубина</span><strong id="radar-val-org">0.0</strong></div>
+            <div class="bar-track"><div class="bar-fill" id="radar-fill-org" style="width: 0%;"></div></div>
+          </div>
+        </div>
+        <div class="coach-tip-box">
+          <strong>Совет:</strong>
+          <p id="dashboard-coach-advice">Нет данных.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="glass-card table-card">
+      <div class="table-responsive">
+        <table class="debatr-table">
+          <thead>
+            <tr>
+              <th>Дебатер</th>
+              <th>Тип</th>
+              <th>Тема</th>
+              <th>Балл</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="speeches-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay hidden" id="auth-modal">
+    <div class="glass-card modal-card auth-card">
+      <div class="modal-header">
+        <h3 id="auth-title">Вход</h3>
+        <button class="modal-close" id="btn-close-auth">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login">Вход</button>
+          <button class="auth-tab" id="tab-register">Регистрация</button>
+        </div>
+        <form id="auth-form" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label" for="auth-username">Имя</label>
+            <input type="text" id="auth-username" class="form-input" placeholder="Имя" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="auth-password">Пароль</label>
+            <input type="password" id="auth-password" class="form-input" placeholder="Пароль" required>
+          </div>
+          <button class="btn-primary btn-block" id="btn-submit-auth">Войти</button>
+        </form>
+        <div class="auth-divider"><span>или</span></div>
+        <button class="btn-guest btn-block" id="btn-guest-mode">Войти как гость</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="settings-modal">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3>Настройки API</h3>
+        <button class="modal-close" id="btn-close-settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="supabase-url">URL Supabase:</label>
+          <input type="text" id="supabase-url" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="supabase-key">Ключ Supabase:</label>
+          <input type="password" id="supabase-key" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ai-api-key">Ключ OpenAI:</label>
+          <input type="password" id="ai-api-key" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ai-mode-select">Режим:</label>
+          <select id="ai-mode-select" class="form-input">
+            <option value="live-api">OpenAI API</option>
+            <option value="luna-sim">Офлайн движок</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-reset-settings">Сброс</button>
+        <button class="btn-primary" id="btn-save-settings">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

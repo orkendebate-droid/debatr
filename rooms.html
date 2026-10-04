@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debatr — Дружеские матчи 1 на 1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <div class="brand">
+        <a href="index.html" style="text-decoration:none; color:inherit;" class="brand-name">Debatr</a>
+      </div>
+
+      <nav class="nav-links">
+        <a href="index.html" class="nav-btn">Баттл</a>
+        <a href="rooms.html" class="nav-btn active">1 на 1</a>
+        <a href="dashboard.html" class="nav-btn">Кабинет</a>
+      </nav>
+
+      <div class="header-right">
+        <div id="user-profile-badge" class="user-badge hidden">
+          <span id="user-display-name">Гость</span>
+          <button id="btn-logout" class="btn-text-tiny">Выйти</button>
+        </div>
+        <button class="btn-secondary btn-sm" id="btn-open-auth">Вход</button>
+        <button class="btn-settings" id="btn-open-settings" title="Настройки API">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <div class="rooms-container">
+      
+      <div class="glass-card room-meta-card">
+        <div class="room-top-row">
+          <div class="room-id-badge">
+            <span>Комната:</span>
+            <strong id="current-room-code">ROOM-842</strong>
+            <button class="btn-text-tiny" id="btn-copy-room-code" title="Скопировать код">Копировать</button>
+          </div>
+          
+          <div class="room-join-controls">
+            <input type="text" id="input-room-code" class="form-input form-input-sm" placeholder="Код...">
+            <button class="btn-secondary btn-sm" id="btn-join-room">Войти</button>
+            <button class="btn-primary btn-sm" id="btn-create-room">Создать</button>
+          </div>
+        </div>
+
+        <div class="room-topic-bar">
+          <strong>Тема:</strong>
+          <span id="room-topic-display">ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.</span>
+        </div>
+      </div>
+
+      <div class="match-duel-grid">
+        
+        <!-- Player 1: Government -->
+        <div class="glass-card player-duel-card">
+          <div class="player-duel-header">
+            <span class="chamber-badge gov-badge">Правительство</span>
+            <input type="text" id="p1-name" class="duel-player-input" value="" placeholder="Спикер 1">
+          </div>
+          <textarea id="p1-speech" class="speech-textarea duel-textarea" placeholder="Речь..."></textarea>
+          <div class="duel-card-footer">
+            <span id="p1-status" class="status-badge status-ready">Ожидание</span>
+            <button class="btn-subtle btn-xs" id="btn-load-p1-sample">Пример</button>
+          </div>
+        </div>
+
+        <!-- Player 2: Opposition -->
+        <div class="glass-card player-duel-card">
+          <div class="player-duel-header">
+            <span class="chamber-badge opp-badge">Оппозиция</span>
+            <input type="text" id="p2-name" class="duel-player-input" value="" placeholder="Спикер 2">
+          </div>
+          <textarea id="p2-speech" class="speech-textarea duel-textarea" placeholder="Речь..."></textarea>
+          <div class="duel-card-footer">
+            <span id="p2-status" class="status-badge status-ready">Ожидание</span>
+            <button class="btn-subtle btn-xs" id="btn-load-p2-sample">Пример</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Judge Control Center -->
+      <div class="duel-judge-bar">
+        <button class="btn-primary btn-large" id="btn-judge-duel">
+          <span>Судейство</span>
+        </button>
+      </div>
+
+      <!-- Duel Results Display -->
+      <div class="glass-card duel-results-card hidden" id="duel-results-box">
+        <div class="duel-verdict-header">
+          <div class="trophy-wrapper">Итог:</div>
+          <div>
+            <h3 id="duel-winner-title">Победитель</h3>
+            <p id="duel-clash-analysis" class="text-muted"></p>
+          </div>
+        </div>
+
+        <div class="duel-scores-table-wrapper">
+          <table class="debatr-table duel-table">
+            <thead>
+              <tr>
+                <th>Спикер</th>
+                <th>Палата</th>
+                <th>Стр.</th>
+                <th>Факты</th>
+                <th>Опров.</th>
+                <th>Ясность</th>
+                <th>Глубина</th>
+                <th>Итог</th>
+              </tr>
+            </thead>
+            <tbody id="duel-scores-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="duel-feedback-grid">
+          <div class="feedback-block block-positive">
+            <strong id="duel-p1-title">Правительство:</strong>
+            <p id="duel-p1-feedback"></p>
+          </div>
+          <div class="feedback-block block-needs-work">
+            <strong id="duel-p2-title">Оппозиция:</strong>
+            <p id="duel-p2-feedback"></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay hidden" id="auth-modal">
+    <div class="glass-card modal-card auth-card">
+      <div class="modal-header">
+        <h3 id="auth-title">Вход</h3>
+        <button class="modal-close" id="btn-close-auth">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login">Вход</button>
+          <button class="auth-tab" id="tab-register">Регистрация</button>
+        </div>
+        <form id="auth-form" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label" for="auth-username">Имя</label>
+            <input type="text" id="auth-username" class="form-input" placeholder="Имя" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="auth-password">Пароль</label>
+            <input type="password" id="auth-password" class="form-input" placeholder="Пароль" required>
+          </div>
+          <button class="btn-primary btn-block" id="btn-submit-auth">Войти</button>
+        </form>
+        <div class="auth-divider"><span>или</span></div>
+        <button class="btn-guest btn-block" id="btn-guest-mode">Войти как гость</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay hidden" id="settings-modal">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3>Настройки API</h3>
+        <button class="modal-close" id="btn-close-settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="supabase-url">URL Supabase:</label>
+          <input type="text" id="supabase-url" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="supabase-key">Ключ Supabase:</label>
+          <input type="password" id="supabase-key" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ai-api-key">Ключ OpenAI:</label>
+          <input type="password" id="ai-api-key" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ai-mode-select">Режим:</label>
+          <select id="ai-mode-select" class="form-input">
+            <option value="live-api">OpenAI API</option>
+            <option value="luna-sim">Офлайн движок</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-reset-settings">Сброс</button>
+        <button class="btn-primary" id="btn-save-settings">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
