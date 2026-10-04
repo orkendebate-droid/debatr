@@ -706,24 +706,36 @@ function loadStoredSettings() {
   if (inputAiApiKey) inputAiApiKey.value = aiKey;
   if (selectAiMode) selectAiMode.value = aiMode;
 
-  // Auto-detect local key from .env.local if present in local dev
-  if (!aiKey) {
-    try {
-      fetch('.env.local')
-        .then(res => res.ok ? res.text() : null)
-        .then(text => {
-          if (text) {
-            const match = text.match(/AI_API_KEY\s*=\s*(.+)/);
-            if (match && match[1]) {
-              const val = match[1].trim();
-              localStorage.setItem('debatr_ai_key', val);
-              if (inputAiApiKey && !inputAiApiKey.value) inputAiApiKey.value = val;
-            }
-          }
-        })
-        .catch(() => {});
-    } catch (_) {}
-  }
+  // Auto-detect local config from .env.local if present
+  try {
+    fetch('.env.local')
+      .then(res => res.ok ? res.text() : null)
+      .then(text => {
+        if (!text) return;
+
+        const urlMatch = text.match(/(?:NEXT_PUBLIC_)?SUPABASE_URL\s*=\s*(.+)/);
+        if (urlMatch && urlMatch[1] && !localStorage.getItem('debatr_supabase_url')) {
+          const val = urlMatch[1].trim();
+          localStorage.setItem('debatr_supabase_url', val);
+          if (inputSupabaseUrl) inputSupabaseUrl.value = val;
+        }
+
+        const keyMatch = text.match(/(?:NEXT_PUBLIC_)?SUPABASE_(?:PUBLISHABLE_KEY|KEY|ANON_KEY)\s*=\s*(.+)/);
+        if (keyMatch && keyMatch[1] && !localStorage.getItem('debatr_supabase_key')) {
+          const val = keyMatch[1].trim();
+          localStorage.setItem('debatr_supabase_key', val);
+          if (inputSupabaseKey) inputSupabaseKey.value = val;
+        }
+
+        const aiKeyMatch = text.match(/(?:AI_API_KEY|OPENAI_API_KEY)\s*=\s*(.+)/);
+        if (aiKeyMatch && aiKeyMatch[1] && !localStorage.getItem('debatr_ai_key')) {
+          const val = aiKeyMatch[1].trim();
+          localStorage.setItem('debatr_ai_key', val);
+          if (inputAiApiKey) inputAiApiKey.value = val;
+        }
+      })
+      .catch(() => {});
+  } catch (_) {}
 }
 
 // ==========================================
