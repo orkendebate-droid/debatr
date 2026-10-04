@@ -131,6 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initBattleMode();
   initRoomsMode();
   initSpeechTimer();
+  initVoiceInput();
+  initTtsToggle();
 });
 
 // Toast system
@@ -1368,15 +1370,192 @@ async function handleBattleSubmit() {
   }
 }
 
+// ==========================================
+// 12.1. WEB SPEECH API: VOICE INPUT & SYNTHESIS
+// ==========================================
+
+let isAutoTtsEnabled = false;
+let recognitionInstance = null;
+let isVoiceRecording = false;
+
+function speakDebateText(text, btnElement = null) {
+  if (!('speechSynthesis' in window)) {
+    showToast("Браузер не поддерживает синтез речи");
+    return;
+  }
+
+  // If already speaking, stop and reset active states
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    document.querySelectorAll('.btn-msg-audio').forEach(b => {
+      b.classList.remove('speaking');
+      b.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> <span>Озвучить</span>`;
+      delete b.dataset.speaking;
+    });
+    if (btnElement && btnElement.dataset.speaking === 'true') {
+      delete btnElement.dataset.speaking;
+      return;
+    }
+  }
+
+  const cleanText = text.replace(/[*_#`]/g, '').trim();
+  if (!cleanText) return;
+
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = 'ru-RU';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+
+  const voices = window.speechSynthesis.getVoices();
+  const ruVoice = voices.find(v => v.lang && (v.lang.startsWith('ru') || v.lang.startsWith('RU')));
+  if (ruVoice) utterance.voice = ruVoice;
+
+  if (btnElement) {
+    btnElement.classList.add('speaking');
+    btnElement.dataset.speaking = 'true';
+    btnElement.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> <span>Стоп</span>`;
+  }
+
+  const resetBtn = () => {
+    if (btnElement) {
+      btnElement.classList.remove('speaking');
+      delete btnElement.dataset.speaking;
+      btnElement.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> <span>Озвучить</span>`;
+    }
+  };
+
+  utterance.onend = resetBtn;
+  utterance.onerror = resetBtn;
+
+  window.speechSynthesis.speak(utterance);
+}
+
 function appendBattleMessage(author, content, className, id = null) {
   const feed = document.getElementById('battle-feed');
   if (!feed) return;
   const div = document.createElement('div');
   div.className = `battle-msg-card ${className}`;
   if (id) div.id = id;
-  div.innerHTML = `<span class="msg-author">${author}</span><p>${content}</p>`;
+
+  const isAiMessage = className.includes('msg-ai');
+  const isUserMessage = className.includes('msg-user');
+
+  if (isAiMessage || isUserMessage) {
+    div.innerHTML = `
+      <div class="msg-header-row">
+        <span class="msg-author">${author}</span>
+        <button type="button" class="btn-msg-audio" title="Озвучить речь" aria-label="Озвучить речь">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          <span>Озвучить</span>
+        </button>
+      </div>
+      <p>${content}</p>
+    `;
+    const audioBtn = div.querySelector('.btn-msg-audio');
+    if (audioBtn) {
+      audioBtn.addEventListener('click', () => speakDebateText(content, audioBtn));
+    }
+    if (isAiMessage && isAutoTtsEnabled) {
+      speakDebateText(content, audioBtn);
+    }
+  } else {
+    div.innerHTML = `<span class="msg-author">${author}</span><p>${content}</p>`;
+  }
+
   feed.appendChild(div);
   feed.scrollTop = feed.scrollHeight;
+}
+
+function initVoiceInput() {
+  const btnVoice = document.getElementById('btn-voice-input');
+  const speechInput = document.getElementById('battle-speech-input');
+  const labelEl = document.getElementById('voice-btn-label');
+  if (!btnVoice || !speechInput) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    btnVoice.addEventListener('click', () => {
+      showToast("Распознавание речи не поддерживается браузером (нужен Chrome или Edge)");
+    });
+    return;
+  }
+
+  try {
+    recognitionInstance = new SpeechRecognition();
+    recognitionInstance.lang = 'ru-RU';
+    recognitionInstance.continuous = true;
+    recognitionInstance.interimResults = true;
+
+    recognitionInstance.onstart = () => {
+      isVoiceRecording = true;
+      btnVoice.classList.add('btn-voice-recording');
+      if (labelEl) labelEl.textContent = 'Слушаю...';
+      showToast("Микрофон включен: наговаривайте свой аргумент");
+    };
+
+    recognitionInstance.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          const text = event.results[i][0].transcript.trim();
+          if (text) {
+            const currentVal = speechInput.value.trim();
+            speechInput.value = currentVal ? `${currentVal} ${text}.` : `${text}.`;
+            speechInput.scrollTop = speechInput.scrollHeight;
+          }
+        }
+      }
+    };
+
+    recognitionInstance.onerror = (event) => {
+      console.warn("Speech recognition error:", event.error);
+      isVoiceRecording = false;
+      btnVoice.classList.remove('btn-voice-recording');
+      if (labelEl) labelEl.textContent = 'Голос';
+      if (event.error === 'not-allowed') {
+        showToast("Разрешите доступ к микрофону в настройках браузера");
+      } else if (event.error !== 'no-speech') {
+        showToast("Микрофон: " + event.error);
+      }
+    };
+
+    recognitionInstance.onend = () => {
+      isVoiceRecording = false;
+      btnVoice.classList.remove('btn-voice-recording');
+      if (labelEl) labelEl.textContent = 'Голос';
+    };
+
+    btnVoice.addEventListener('click', () => {
+      if (isVoiceRecording) {
+        recognitionInstance.stop();
+        isVoiceRecording = false;
+        btnVoice.classList.remove('btn-voice-recording');
+        if (labelEl) labelEl.textContent = 'Голос';
+        showToast("Запись завершена");
+      } else {
+        try {
+          recognitionInstance.start();
+        } catch (err) {
+          console.warn("Recognition start failed:", err);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("SpeechRecognition init error:", e);
+  }
+}
+
+function initTtsToggle() {
+  const btnTts = document.getElementById('btn-tts-toggle');
+  if (!btnTts) return;
+  btnTts.addEventListener('click', () => {
+    isAutoTtsEnabled = !isAutoTtsEnabled;
+    btnTts.textContent = isAutoTtsEnabled ? 'Озвучка: Вкл' : 'Озвучка: Выкл';
+    btnTts.classList.toggle('active', isAutoTtsEnabled);
+    if (!isAutoTtsEnabled && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    showToast(isAutoTtsEnabled ? 'Авто-озвучка включена' : 'Авто-озвучка выключена');
+  });
 }
 
 function generateFallbackOpeningSpeech(topic) {
