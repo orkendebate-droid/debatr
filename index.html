@@ -88,7 +88,7 @@
         </div>
       </div>
 
-      <!-- 2. ACTIVE CHAT VIEW: Live debate with GPT-6 Luna -->
+      <!-- 2. ACTIVE CHAT VIEW: Live debate with GPT-6 Luna (Full-Screen) -->
       <div id="battle-active-view" class="hidden">
         
         <!-- Active round top bar -->
@@ -101,7 +101,7 @@
             </div>
             <div class="round-bar-actions">
               <button type="button" class="btn-subtle btn-xs" id="btn-back-to-setup">Параметры</button>
-              <button type="button" class="btn-secondary btn-xs" id="btn-finish-battle-early" disabled>Вызвать судью</button>
+              <button type="button" class="btn-primary btn-xs" id="btn-finish-battle-early" disabled>Завершить раунд</button>
             </div>
           </div>
           <h2 id="battle-topic-text" class="active-topic-heading"></h2>
@@ -124,83 +124,74 @@
           </div>
         </div>
 
-        <!-- Battle Flow Grid -->
-        <div class="battle-flow-grid">
-          
-          <!-- Column 1: Chat Feed & Speech Input -->
-          <div class="battle-feed-col">
-            <div class="battle-feed" id="battle-feed">
-              <div class="battle-msg-card msg-system">
-                <span class="msg-author">Система</span>
-                <p>Раунд начат. Уровень: <strong id="current-persona-name">Начальный</strong>.</p>
-              </div>
-            </div>
-
-            <!-- Input area for user move -->
-            <div class="glass-card battle-input-card">
-              <textarea id="battle-speech-input" class="speech-textarea battle-textarea" placeholder="Речь или аргумент..."></textarea>
-              <div class="battle-actions-row">
-                <button class="btn-secondary" id="btn-battle-sample">Пример</button>
-                <button class="btn-primary" id="btn-battle-submit">
-                  <span>Отправить</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                </button>
-              </div>
+        <!-- Full-Screen Chat Feed & Input -->
+        <div class="battle-chat-fullscreen">
+          <div class="battle-feed" id="battle-feed">
+            <div class="battle-msg-card msg-system">
+              <span class="msg-author">Система</span>
+              <p>Раунд начат. Уровень: <strong id="current-persona-name">Начальный</strong>.</p>
             </div>
           </div>
 
-          <!-- Column 2: Live AI Feedback / Verdict sidebar -->
-          <div class="battle-verdict-col">
-            <div class="glass-card battle-verdict-card" id="battle-verdict-box">
-              <div class="verdict-placeholder" id="battle-verdict-empty">
-                <h3>Вердикт</h3>
-                <p>Ведите диалог с GPT-6 Luna. В конце нажмите «Вызвать судью» для оценки.</p>
-              </div>
-
-              <!-- When Verdict Ready -->
-              <div class="verdict-content hidden" id="battle-verdict-content">
-                <div class="verdict-banner" id="battle-winner-banner">
-                  <span class="trophy-icon">ИТОГ:</span>
-                  <div>
-                    <h4 id="battle-winner-title">Победитель</h4>
-                    <span id="battle-winner-subtitle" class="text-muted"></span>
-                  </div>
-                </div>
-
-                <div class="verdict-score-display">
-                  <span class="score-large" id="battle-user-overall">—</span>
-                  <div class="score-meta">
-                    <span class="score-label">Балл</span>
-                    <span class="badge-tag" id="battle-user-band">Ожидание</span>
-                  </div>
-                </div>
-
-                <div class="rubric-bars-compact">
-                  <div class="bar-mini"><span>Структура</span><span id="b-score-str">—</span></div>
-                  <div class="bar-mini"><span>Факты</span><span id="b-score-evi">—</span></div>
-                  <div class="bar-mini"><span>Опровержение</span><span id="b-score-reb">—</span></div>
-                  <div class="bar-mini"><span>Ясность</span><span id="b-score-cla">—</span></div>
-                  <div class="bar-mini"><span>Глубина</span><span id="b-score-org">—</span></div>
-                </div>
-
-                <div class="feedback-block block-positive">
-                  <span class="block-title">Плюсы:</span>
-                  <p id="battle-analysis-strengths" class="block-text"></p>
-                </div>
-
-                <div class="feedback-block block-needs-work">
-                  <span class="block-title">Минусы:</span>
-                  <p id="battle-analysis-advice" class="block-text"></p>
-                </div>
-
-                <button class="btn-primary btn-block" id="btn-battle-new-round">Новый раунд</button>
-              </div>
-
+          <!-- Input area for user move -->
+          <div class="glass-card battle-input-card">
+            <textarea id="battle-speech-input" class="speech-textarea battle-textarea" placeholder="Ваш аргумент или опровержение..."></textarea>
+            <div class="battle-actions-row">
+              <button class="btn-secondary" id="btn-battle-sample">Пример</button>
+              <button class="btn-primary" id="btn-battle-submit">
+                <span>Отправить</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
             </div>
           </div>
-
         </div>
 
+      </div>
+
+      <!-- 3. VERDICT VIEW: Full-screen end of round feedback -->
+      <div id="battle-verdict-view" class="hidden">
+        <div class="glass-card battle-verdict-screen">
+          <div class="verdict-banner" id="battle-winner-banner">
+            <span class="trophy-icon">ИТОГ:</span>
+            <div>
+              <h3 id="battle-winner-title" style="margin:0; font-size:1.25rem;">Победитель</h3>
+              <p id="battle-winner-subtitle" class="text-muted" style="margin-top:0.25rem; font-size:0.88rem;"></p>
+            </div>
+          </div>
+
+          <div class="verdict-score-display">
+            <span class="score-large" id="battle-user-overall">—</span>
+            <div class="score-meta">
+              <span class="score-label">Общий балл</span>
+              <span class="badge-tag" id="battle-user-band">Ожидание</span>
+            </div>
+          </div>
+
+          <div class="rubric-bars-compact">
+            <div class="bar-mini"><span>Структура</span><span id="b-score-str">—</span></div>
+            <div class="bar-mini"><span>Факты</span><span id="b-score-evi">—</span></div>
+            <div class="bar-mini"><span>Опровержение</span><span id="b-score-reb">—</span></div>
+            <div class="bar-mini"><span>Ясность</span><span id="b-score-cla">—</span></div>
+            <div class="bar-mini"><span>Глубина</span><span id="b-score-org">—</span></div>
+          </div>
+
+          <div class="verdict-details-grid">
+            <div class="feedback-block block-positive">
+              <span class="block-title">Сильная сторона:</span>
+              <p id="battle-analysis-strengths" class="block-text"></p>
+            </div>
+
+            <div class="feedback-block block-needs-work">
+              <span class="block-title">Совет для роста:</span>
+              <p id="battle-analysis-advice" class="block-text"></p>
+            </div>
+          </div>
+
+          <div class="verdict-actions-row">
+            <button type="button" class="btn-subtle" id="btn-battle-review-chat">Посмотреть чат</button>
+            <button type="button" class="btn-primary" id="btn-battle-new-round">Новый раунд</button>
+          </div>
+        </div>
       </div>
 
     </div>

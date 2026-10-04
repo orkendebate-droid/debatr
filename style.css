@@ -796,26 +796,55 @@ body {
   font-weight: 600;
 }
 
-.battle-flow-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.battle-feed-col {
+.battle-chat-fullscreen {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%;
 }
 
 .battle-feed {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  max-height: 420px;
+  min-height: 380px;
+  max-height: 520px;
   overflow-y: auto;
-  padding-right: 0.25rem;
+  padding: 1.15rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Dedicated End-of-Round Verdict Screen */
+.battle-verdict-screen {
+  max-width: 760px;
+  margin: 1.5rem auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.verdict-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .verdict-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.verdict-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 .battle-msg-card {

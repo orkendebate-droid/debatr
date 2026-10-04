@@ -1284,17 +1284,29 @@ function initBattleMode() {
     btnBattleSubmit.addEventListener('click', handleBattleSubmit);
   }
 
-  if (btnFinishEarly) {
-    btnFinishEarly.addEventListener('click', handleBattleJudgeCall);
-  }
+    if (btnFinishEarly) {
+      btnFinishEarly.addEventListener('click', handleBattleJudgeCall);
+    }
 
-  if (btnNewRound) {
-    btnNewRound.addEventListener('click', () => {
-      if (activeView) activeView.classList.add('hidden');
-      if (setupView) setupView.classList.remove('hidden');
-    });
+    const verdictView = document.getElementById('battle-verdict-view');
+    const btnReviewChat = document.getElementById('btn-battle-review-chat');
+    const btnVerdictNewRound = document.getElementById('btn-battle-new-round');
+
+    if (btnReviewChat) {
+      btnReviewChat.addEventListener('click', () => {
+        if (verdictView) verdictView.classList.add('hidden');
+        if (activeView) activeView.classList.remove('hidden');
+      });
+    }
+
+    if (btnVerdictNewRound) {
+      btnVerdictNewRound.addEventListener('click', () => {
+        if (verdictView) verdictView.classList.add('hidden');
+        if (activeView) activeView.classList.add('hidden');
+        if (setupView) setupView.classList.remove('hidden');
+      });
+    }
   }
-}
 
 async function handleBattleSubmit() {
   const speechInput = document.getElementById('battle-speech-input');
@@ -1368,7 +1380,7 @@ function appendBattleMessage(author, content, className, id = null) {
 }
 
 function generateFallbackOpeningSpeech(topic) {
-  return `Уважаемые судьи и оппоненты! Палата Правительства вносит резолюцию: "${topic}". Наша ключевая цель — обеспечить системную устойчивость и защитить долгосрочные интересы общества. Во-первых, отсутствие единых стандартов в данной области порождает системные риски, которые рынок не в состоянии компенсировать самостоятельно. Во-вторых, наше предложение формирует прозрачные стимулы развития, нивелируя монопольные злоупотребления. Мы призываем палату поддержать резолюцию.`;
+  return `Палата Правительства поддерживает резолюцию: "${topic}". Отсутствие единых норм несет критические риски безопасности. Наше регулирование установит ответственность и защитит общество без ущерба развитию.`;
 }
 
 async function generateAiOpeningSpeech(topic, role = 'gov') {
@@ -1376,10 +1388,10 @@ async function generateAiOpeningSpeech(topic, role = 'gov') {
   if (!apiKey) return generateFallbackOpeningSpeech(topic);
 
   const persona = PERSONA_CONFIGS[selectedPersona] || PERSONA_CONFIGS.novice;
-  const prompt = `Ты спикер дебатов по имени GPT-6 Luna. Твоя роль: Палата Правительства.
+  const prompt = `Ты спикер дебатов GPT-6 Luna (Палата Правительства).
 Резолюция: "${topic}".
-Уровень раунда: ${persona.name}.
-Произнеси структурированную вступительную речь премьер-министра (2 абзаца). Разверни тезис, доказательство и сравнительный импакт. Отвечай на русском языке.`;
+Уровень: ${persona.name}.
+КРАТКОСТЬ: Напиши строго 2-3 коротких предложения (до 40-50 слов). Тезис, доказательство и импакт. Без лишних слов и вступительных фраз. На русском языке.`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1392,7 +1404,7 @@ async function generateAiOpeningSpeech(topic, role = 'gov') {
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 300
+        max_tokens: 120
       })
     });
 
@@ -1413,53 +1425,54 @@ async function generateAiOpponentSpeech(userSpeech, topic, userRole) {
 
   const recentDialog = battleDialogueHistory.slice(-4).map(m => (m.role === 'user' ? 'Оппонент: ' : 'GPT-6 Luna: ') + m.text).join('\n');
 
-  const prompt = `Ты спикер дебатов высшего уровня по имени GPT-6 Luna. Твоя роль: представитель ${opponentRoleName}.
-Уровень сложности: ${persona.name} (${persona.stylePrompt}).
-Резолюция раунда: "${topic}".
-Контекст раунда:
-${recentDialog}
+  const prompt = `Ты спикер дебатов высшего класса GPT-6 Luna (${opponentRoleName}).
+Резолюция: "${topic}".
+Уровень: ${persona.name}.
 
-Новая реплика оппонента:
-"${userSpeech}"
+Речь оппонента: "${userSpeech}"
 
-Твоя задача: произнести хлесткий, убедительный ответ опровержения в роли GPT-6 Luna (2 емких абзаца).
-- Опровергни довод соперника.
-- Приведи встречный сценарий с импактом.
-Отвечай на чистом русском языке прямо и по существу дебатов.`;
+ПРАВИЛО КРАТКОСТИ: Ответь СТРОГО 2-3 короткими, емкими предложениями (до 40-50 слов).
+1. Четко укажи на уязвимость в логике оппонента.
+2. Приведи встречный тезис с импактом.
+Запрещено лить воду, делать длинные вступления и писать много текста. Отвечай хлёстко и по существу.`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 350
-    })
-  });
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 120
+      })
+    });
 
-  if (!response.ok) throw new Error("API call failed");
-  const data = await response.json();
-  return data.choices[0].message.content.trim();
+    if (!response.ok) return generateFallbackOpponentSpeech(userSpeech, topic, userRole);
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+  } catch (err) {
+    return generateFallbackOpponentSpeech(userSpeech, topic, userRole);
+  }
 }
 
 function generateFallbackOpponentSpeech(userSpeech, topic, userRole) {
   if (selectedPersona === 'socrates') {
-    return `Оппонент выдвигает утверждение, но задумывался ли он о фундаментальной предпосылке своего тезиса? Заявляя о необходимости жесткого вмешательства, вы исходите из аксиомы, будто внешняя регуляция способна отличить истинную угрозу от подлинного блага. Однако история человеческого разума показывает: любая попытка централизованно канонизировать границы познания лишь усугубляет невежество. Покажите мне объективный критерий, по которому регулятор отличит созидательную идею от разрушительной, не опираясь на сиюминутную выгоду сильных мира сего.`;
+    return `Вы требуете ограничений, но на каком объективном критерии они основаны? Без четкой границы регуляция лишь породит произвол чиновников и затормозит поиск истины.`;
   }
   if (selectedPersona === 'pragmatist') {
-    return `Коллеги говорят о высоких идеалах, но давайте посмотрим на практический баланс и экономику. Любое международное лицензирование требует ежегодных бюджетных ассигнований в десятки миллиардов долларов и бюрократического аппарата из тысяч чиновников. В результате малый бизнес и технологические стартапы будут задушены регуляторным бременем комплаенса, а теневые юрисдикции просто проигнорируют эти соглашения. Мы получим худший из миров: колоссальные расходы для законопослушных компаний и нулевой эффект в серой зоне.`;
+    return `Это экономически нереализуемо. Бюрократический комплаенс задушит стартапы, а теневые игроки легко обойдут запреты через серые юрисдикции.`;
   }
   if (selectedPersona === 'novice') {
-    return `Мы категорически не согласны с этой инициативой! Это нарушит свободу всех людей, и вообще в интернете и так все хорошо работает. Если мы начнем лицензировать компьютеры, то скоро нам запретят писать программы дома, и школьникам нельзя будет учить информатику. Мы считаем, что нужно просто верить людям и не придумывать лишние законы.`;
+    return `Мы категорически против! Это ограничит свободу пользователей, а технологии и так прекрасно развиваются сами.`;
   }
   if (userRole === 'gov') {
-    return `Коллеги из Правительства построили речь на предположении, что государственный контроль гарантирует безопасность. Однако это фундаментальная логическая ошибка. Во-первых, вы игнорируете проблему монополизации: государственное лицензирование отсекает независимых исследователей и стартапы, оставляя отрасль в руках закрытых корпораций. Во-вторых, международные регуляторы доказали свою неповоротливость в сфере IT — технологии развиваются быстрее законодательных актов. Наша позиция: гибкие открытые стандарты аудита обеспечат куда большую безопасность, чем закрытая бюрократическая монополия.`;
+    return `Правительство ошибочно считает контроль гарантией безопасности. На деле монополия регуляторов отсечет независимых разработчиков и скроет реальные уязвимости.`;
   } else {
-    return `Оппозиция заявляет, что рынок сам отрегулирует безопасность, а лицензирование задушит инновации. Но этот аргумент рушится при первом же фактчекинге: когда на кону стоит кибербезопасность объектов энергетики и персональные данные миллионов граждан, принцип невмешательства превращается в безответственность. Фармацевтика не остановилась из-за лицензий, авиация не перестала летать из-за сертификации безопасности. Напротив, доверие общества возникло именно благодаря регулированию. Голосуйте за резолюцию!`;
+    return `Оппозиция уповает на саморегуляцию рынка, но рынок пренебрегает рисками ради прибыли. Авиация и медицина доказали: безопасность невозможна без жестких стандартов.`;
   }
 }
 
@@ -1482,11 +1495,11 @@ async function handleBattleJudgeCall() {
     verdictData = judgeBattleFallback(userSpeeches, aiSpeeches, battleUserRole);
   }
 
-  // Display Verdict
-  const emptyBox = document.getElementById('battle-verdict-empty');
-  const contentBox = document.getElementById('battle-verdict-content');
-  if (emptyBox) emptyBox.classList.add('hidden');
-  if (contentBox) contentBox.classList.remove('hidden');
+  // Display Verdict: Switch from full-screen chat to verdict screen
+  const activeView = document.getElementById('battle-active-view');
+  const verdictView = document.getElementById('battle-verdict-view');
+  if (activeView) activeView.classList.add('hidden');
+  if (verdictView) verdictView.classList.remove('hidden');
 
   document.getElementById('battle-winner-title').textContent = verdictData.winner;
   document.getElementById('battle-winner-subtitle').textContent = verdictData.clash;
