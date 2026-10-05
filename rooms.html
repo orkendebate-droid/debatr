@@ -142,6 +142,15 @@
             </div>
           </div>
 
+          <!-- Room Link & Share Banner (Immediate direct link for opponent) -->
+          <div class="room-share-banner glass-card" id="room-share-banner">
+            <div class="room-share-label">Ссылка для соперника:</div>
+            <div class="room-share-input-wrap">
+              <input type="text" id="arena-room-direct-link" readonly class="form-input room-link-input" value="">
+              <button class="btn-primary btn-sm" id="btn-copy-arena-link">Копировать</button>
+            </div>
+          </div>
+
           <!-- Room Players Status Bar -->
           <div class="room-pairing-bar">
             <div class="pairing-slot" id="slot-p1">
@@ -151,47 +160,80 @@
             <div class="pairing-vs">VS</div>
             <div class="pairing-slot" id="slot-p2">
               <span class="pairing-role" id="p2-role-badge">Спикер 2:</span>
-              <strong id="p2-display-tag">Ожидание оппонента...</strong>
+              <strong id="p2-display-tag">Ожидание соперника...</strong>
               <button class="btn-primary btn-xs" id="btn-claim-opp-slot">Откликнуться на игру</button>
             </div>
           </div>
         </div>
 
-        <div class="match-duel-grid">
-          
-          <!-- Player 1 -->
-          <div class="glass-card player-duel-card">
-            <div class="player-duel-header">
-              <span class="chamber-badge gov-badge" id="chamber-badge-p1">Правительство</span>
-              <input type="text" id="p1-name" class="duel-player-input" value="" placeholder="Спикер 1">
-            </div>
-            <textarea id="p1-speech" class="speech-textarea duel-textarea" placeholder="Речь премьер-министра..."></textarea>
-            <div class="duel-card-footer">
-              <span id="p1-status" class="status-badge status-ready">Готов</span>
-              <button class="btn-subtle btn-xs" id="btn-load-p1-sample">Пример</button>
-            </div>
+        <!-- STATE A: Waiting for opponent -->
+        <div id="arena-waiting-state" class="arena-state-box text-center glass-card">
+          <h4>Ожидание соперника</h4>
+          <p class="text-muted">Отправьте ссылку сопернику. Как только он перейдет в комнату, система автоматически назначит роли (Правительство / Оппозиция), откроет резолюцию и запустит 10 минут на подготовку.</p>
+          <div class="waiting-actions">
+            <button class="btn-secondary btn-sm" id="btn-copy-arena-link-wait">Скопировать ссылку</button>
+            <button class="btn-subtle btn-xs" id="btn-sim-opponent-join">Войти как соперник (тест)</button>
           </div>
-
-          <!-- Player 2 -->
-          <div class="glass-card player-duel-card">
-            <div class="player-duel-header">
-              <span class="chamber-badge opp-badge" id="chamber-badge-p2">Оппозиция</span>
-              <input type="text" id="p2-name" class="duel-player-input" value="" placeholder="Спикер 2">
-            </div>
-            <textarea id="p2-speech" class="speech-textarea duel-textarea" placeholder="Речь лидера оппозиции..."></textarea>
-            <div class="duel-card-footer">
-              <span id="p2-status" class="status-badge status-ready">Готов</span>
-              <button class="btn-subtle btn-xs" id="btn-load-p2-sample">Пример</button>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Judge Control Center -->
-        <div class="duel-judge-bar">
-          <button class="btn-primary btn-large" id="btn-judge-duel">
-            <span>Судейство раунда</span>
-          </button>
+        <!-- STATE B: Active Match with 10-min Prep Timer and Chat Debate -->
+        <div id="arena-active-match" class="hidden">
+          
+          <!-- 10 Minute Prep Timer Card -->
+          <div class="glass-card prep-timer-card" id="prep-timer-card">
+            <div class="prep-timer-header">
+              <span class="prep-timer-title">Подготовка к раунду</span>
+              <span class="prep-timer-status" id="prep-timer-status">Идет подготовка (10 мин)</span>
+            </div>
+            <div class="prep-timer-display" id="prep-timer-countdown">10:00</div>
+            <div class="prep-timer-controls">
+              <button class="btn-subtle btn-xs" id="btn-toggle-prep-timer">Пауза</button>
+              <button class="btn-primary btn-xs" id="btn-finish-prep-timer">Начать выступление</button>
+            </div>
+          </div>
+
+          <!-- 1v1 Debate Chat & Speeches Feed -->
+          <div class="glass-card debate-chat-card">
+            <div class="debate-chat-header">
+              <div class="debate-chat-header-title">Раунд выступлений (Чат соперников)</div>
+              <div class="debate-roles-pill-wrap">
+                <span class="chamber-badge gov-badge" id="chat-badge-gov">Правительство: -</span>
+                <span class="chamber-badge opp-badge" id="chat-badge-opp">Оппозиция: -</span>
+              </div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="debate-chat-stream" id="debate-chat-stream">
+              <!-- Dynamically populated speeches and messages -->
+            </div>
+
+            <!-- Speech Composer / Chat Input -->
+            <div class="debate-chat-compose">
+              <div class="compose-speaker-row">
+                <span class="compose-label">Ваша роль:</span>
+                <strong id="compose-user-role">Правительство</strong>
+                <span class="text-muted" style="margin-left:auto; font-size:0.8rem;" id="compose-user-name"></span>
+              </div>
+              <textarea id="debate-message-input" class="speech-textarea debate-chat-textarea" placeholder="Введите тезис, аргумент или полную речь спикера..."></textarea>
+              <div class="debate-compose-actions">
+                <button class="btn-subtle btn-xs" id="btn-chat-sample">Вставить пример</button>
+                <button class="btn-primary btn-sm" id="btn-chat-send">Отправить в раунд</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden inputs for AI Judge compatibility -->
+          <textarea id="p1-speech" class="hidden"></textarea>
+          <textarea id="p2-speech" class="hidden"></textarea>
+          <input type="hidden" id="p1-name" value="">
+          <input type="hidden" id="p2-name" value="">
+
+          <!-- Judge Control Center -->
+          <div class="duel-judge-bar" style="margin-top:1.25rem;">
+            <button class="btn-primary btn-large" id="btn-judge-duel">
+              <span>Судейство раунда</span>
+            </button>
+          </div>
         </div>
 
         <!-- Duel Results Display -->
@@ -250,74 +292,12 @@
         
         <!-- Room Type Selector (Open vs Private) -->
         <div class="form-group">
-          <label class="form-label">Тип комнаты:</label>
-          <div class="room-type-toggle">
-            <label class="room-type-option">
-              <input type="radio" name="modal-room-type" value="public" checked>
-              <div class="room-type-card">
-                <div class="type-icon public-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </div>
-                <div class="type-text">
-                  <strong>Открытая комната</strong>
-                  <span>Видна всем в списке. Укажите время — любой дебатер может откликнуться и сыграть.</span>
-                </div>
-              </div>
-            </label>
-
-            <label class="room-type-option">
-              <input type="radio" name="modal-room-type" value="private">
-              <div class="room-type-card">
-                <div class="type-icon private-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <div class="type-text">
-                  <strong>Закрытая комната</strong>
-                  <span>Только для друзей. Вход строго по индивидуальной ссылке или сканированию QR-кода.</span>
-                </div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <!-- Time Picker (Mandatory for public, optional/flexible for private) -->
-        <div class="form-group" id="group-scheduled-time">
-          <label class="form-label" for="input-scheduled-time">Время проведения дебатов:</label>
-          <div class="time-input-wrapper">
-            <input type="text" id="input-scheduled-time" class="form-input" placeholder="Например: Сегодня в 19:30, или 18:00 МСК" value="Сегодня в 19:00">
-            <div class="quick-time-pills">
-              <button type="button" class="btn-xs btn-subtle time-quick-btn" data-time="Сегодня в 18:00">18:00</button>
-              <button type="button" class="btn-xs btn-subtle time-quick-btn" data-time="Сегодня в 19:30">19:30</button>
-              <button type="button" class="btn-xs btn-subtle time-quick-btn" data-time="Сегодня в 21:00">21:00</button>
-              <button type="button" class="btn-xs btn-subtle time-quick-btn" data-time="Завтра в 17:00">Завтра 17:00</button>
-              <button type="button" class="btn-xs btn-subtle time-quick-btn" data-time="Прямо сейчас">Сейчас</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Debate Category Selection -->
-        <div class="form-group">
-          <label class="form-label" for="select-room-category">Сфера дебатов:</label>
-          <select id="select-room-category" class="form-input">
-            <option value="education">Образование и школа</option>
-            <option value="ecology">Экология и климат</option>
-            <option value="ai_tech">ИИ и технологии</option>
-            <option value="economy">Экономика</option>
-            <option value="society">Общество и право</option>
-          </select>
-          <div class="category-prep-hint">
-            <span>Резолюция откроется за 15 минут до начала для подготовки.</span>
-          </div>
-        </div>
-
-        <!-- Creator Name and Random Position Lottery Info -->
-        <div class="form-group">
-          <label class="form-label" for="input-creator-name">Имя спикера:</label>
+          <label class="form-label" for="input-creator-name">Ваше имя:</label>
           <input type="text" id="input-creator-name" class="form-input" placeholder="Имя">
-          <div class="category-prep-hint" style="margin-top:0.5rem;">
-            <span>Позиции (Правительство / Оппозиция) определяются случайной жеребьевкой.</span>
-          </div>
         </div>
+        <p class="text-muted" style="font-size:0.85rem; margin-top:0.5rem;">
+          После создания вы получите ссылку для соперника. Когда он зайдет — система выдаст роли, резолюцию и запустит 10 минут на подготовку перед выступлением.
+        </p>
 
       </div>
       <div class="modal-footer">

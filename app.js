@@ -2120,30 +2120,52 @@ function initRoomsMode() {
 
   const selectCategory = document.getElementById('select-room-category');
 
-  // Handle Create Room submit
+  // Direct link copying in Arena
+  const btnCopyArenaLink = document.getElementById('btn-copy-arena-link');
+  const btnCopyArenaLinkWait = document.getElementById('btn-copy-arena-link-wait');
+  const arenaRoomLinkInput = document.getElementById('arena-room-direct-link');
+
+  function copyArenaDirectLink() {
+    const link = arenaRoomLinkInput ? arenaRoomLinkInput.value : `${window.location.origin}${window.location.pathname}?room=${activeRoomData.code}`;
+    copyTextToClipboard(link, `Ссылка на комнату ${activeRoomData.code} скопирована! Отправьте сопернику.`);
+  }
+
+  if (btnCopyArenaLink) btnCopyArenaLink.addEventListener('click', copyArenaDirectLink);
+  if (btnCopyArenaLinkWait) btnCopyArenaLinkWait.addEventListener('click', copyArenaDirectLink);
+
+  // Test button to simulate opponent joining via link
+  const btnSimJoin = document.getElementById('btn-sim-opponent-join');
+  if (btnSimJoin) {
+    btnSimJoin.addEventListener('click', () => {
+      matchPlayersInRoom(activeRoomData, "Алихан С.");
+    });
+  }
+
+  // Handle Create Room submit - Simple creation with direct room link
   if (btnSubmitCreateRoom) {
     btnSubmitCreateRoom.addEventListener('click', async () => {
-      const selectedType = document.querySelector('input[name="modal-room-type"]:checked')?.value || 'public';
-      const timeVal = (inputScheduledTime?.value || '').trim() || 'Сегодня в 19:00';
-      const categoryKey = selectCategory ? selectCategory.value : 'education';
-      const categoryName = getCategoryName(categoryKey);
-      const generatedResolution = getRandomResolutionForCategory(categoryKey);
       const creatorName = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
-
       const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
+
+      // Random topic resolution prepared in advance
+      const categories = Object.keys(DEBATE_CATEGORIES);
+      const catKey = categories[Math.floor(Math.random() * categories.length)];
+      const catName = getCategoryName(catKey);
+      const generatedResolution = getRandomResolutionForCategory(catKey);
 
       const newRoom = {
         code: code,
-        category: categoryKey,
-        category_name: categoryName,
-        topic: generatedResolution, // The resolution
-        is_revealed: false,          // Reveals 15 min before match
-        room_type: selectedType,
-        scheduled_time: timeVal,
+        category: catKey,
+        category_name: catName,
+        topic: generatedResolution,
+        is_revealed: false,
+        room_type: 'private',
+        scheduled_time: 'Сразу после входа соперника',
         creator_name: creatorName,
-        p1_name: null,               // Determined randomly upon opponent match
+        p1_name: null,
         p2_name: null,
-        status: 'waiting'
+        status: 'waiting',
+        chat_messages: []
       };
 
       // Save to Supabase if configured
@@ -2167,24 +2189,18 @@ function initRoomsMode() {
         }
       }
 
-      // Add to local storage if public
-      if (selectedType === 'public') {
-        const rooms = getStoredPublicRooms();
-        rooms.unshift(newRoom);
-        saveStoredPublicRooms(rooms);
-      }
+      // Add to local storage
+      const rooms = getStoredPublicRooms();
+      rooms.unshift(newRoom);
+      saveStoredPublicRooms(rooms);
 
       activeRoomData = newRoom;
       closeCreateModal();
       loadRoomIntoArena(activeRoomData);
       showSection('arena');
 
-      if (selectedType === 'private') {
-        showToast(`Создана закрытая комната ${code} по теме «${categoryName}»! Отправьте ссылку или QR.`);
-        setTimeout(() => openQrModal(code), 300);
-      } else {
-        showToast(`Комната ${code} («${categoryName}») открыта на ${timeVal}! Резолюция откроется за 15 мин.`);
-      }
+      const roomUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
+      copyTextToClipboard(roomUrl, `Комната ${code} создана! Ссылка скопирована в буфер. Отправьте ее сопернику.`);
     });
   }
 
@@ -2269,39 +2285,92 @@ function initRoomsMode() {
     });
   }
 
+  // Prep timer state
+  let prepTimerInterval = null;
+  let prepTimerRemaining = 600; // 10 minutes (600s)
+  let isPrepTimerRunning = false;
+
+  function formatTimeMinSec(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function startPrepTimer() {
+    clearInterval(prepTimerInterval);
+    prepTimerRemaining = 600;
+    isPrepTimerRunning = true;
+    updatePrepTimerUI();
+    const btnToggle = document.getElementById('btn-toggle-prep-timer');
+    if (btnToggle) btnToggle.textContent = 'Пауза';
+
+    prepTimerInterval = setInterval(() => {
+      if (prepTimerRemaining > 0) {
+        prepTimerRemaining--;
+        updatePrepTimerUI();
+      } else {
+        clearInterval(prepTimerInterval);
+        isPrepTimerRunning = false;
+        const statusEl = document.getElementById('prep-timer-status');
+        if (statusEl) {
+          statusEl.textContent = 'Время подготовки истекло. Выступления открыты.';
+          statusEl.style.color = '#10b981';
+        }
+        showToast('10 минут подготовки истекли! Переходите к речам в раунде.');
+      }
+    }, 1000);
+  }
+
+  function togglePrepTimer() {
+    const btnToggle = document.getElementById('btn-toggle-prep-timer');
+    if (isPrepTimerRunning) {
+      clearInterval(prepTimerInterval);
+      isPrepTimerRunning = false;
+      if (btnToggle) btnToggle.textContent = 'Продолжить';
+    } else {
+      if (prepTimerRemaining <= 0) prepTimerRemaining = 600;
+      isPrepTimerRunning = true;
+      if (btnToggle) btnToggle.textContent = 'Пауза';
+      prepTimerInterval = setInterval(() => {
+        if (prepTimerRemaining > 0) {
+          prepTimerRemaining--;
+          updatePrepTimerUI();
+        } else {
+          clearInterval(prepTimerInterval);
+          isPrepTimerRunning = false;
+        }
+      }, 1000);
+    }
+  }
+
+  function finishPrepTimer() {
+    clearInterval(prepTimerInterval);
+    prepTimerRemaining = 0;
+    isPrepTimerRunning = false;
+    updatePrepTimerUI();
+    const statusEl = document.getElementById('prep-timer-status');
+    if (statusEl) {
+      statusEl.textContent = 'Подготовка завершена. Идет раунд выступлений.';
+      statusEl.style.color = '#10b981';
+    }
+    showToast('Подготовка завершена. Начинайте выступления спикеров!');
+  }
+
+  function updatePrepTimerUI() {
+    const countdownEl = document.getElementById('prep-timer-countdown');
+    if (countdownEl) countdownEl.textContent = formatTimeMinSec(prepTimerRemaining);
+  }
+
+  const btnTogglePrep = document.getElementById('btn-toggle-prep-timer');
+  const btnFinishPrep = document.getElementById('btn-finish-prep-timer');
+  if (btnTogglePrep) btnTogglePrep.addEventListener('click', togglePrepTimer);
+  if (btnFinishPrep) btnFinishPrep.addEventListener('click', finishPrepTimer);
+
   // Claim slot in Arena
   if (btnClaimOppSlot) {
     btnClaimOppSlot.addEventListener('click', () => {
       const responderName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер-соперник';
-      const creatorName = activeRoomData.creator_name || activeRoomData.p1_name || 'Дебатер 1';
-
-      // RANDOM CHAMBER LOTTERY (50/50 chance for who gets Government vs Opposition)
-      const creatorIsGov = Math.random() < 0.5;
-      if (creatorIsGov) {
-        activeRoomData.p1_name = creatorName;
-        activeRoomData.p2_name = responderName;
-      } else {
-        activeRoomData.p1_name = responderName;
-        activeRoomData.p2_name = creatorName;
-      }
-
-      activeRoomData.status = 'matched';
-      activeRoomData.room_type = 'private'; // Becomes private once matched!
-
-      // Remove from public rooms list so other people can't enter
-      let rooms = getStoredPublicRooms();
-      rooms = rooms.filter(r => r.code !== activeRoomData.code);
-      saveStoredPublicRooms(rooms);
-
-      // Save to user profile & sync with cloud
-      saveUserActiveMatch(activeRoomData);
-      syncRoomUpdateToSupabase(activeRoomData);
-
-      loadRoomIntoArena(activeRoomData);
-      renderPublicRoomsGrid();
-
-      const userRole = activeRoomData.p1_name === responderName ? "Правительство" : "Оппозиция";
-      showToast(`Жеребьевка палат завершена! Ваша позиция: ${userRole}. Ссылка в Кабинете!`, 4500);
+      matchPlayersInRoom(activeRoomData, responderName, startPrepTimer);
     });
   }
 
@@ -2309,6 +2378,53 @@ function initRoomsMode() {
     btnRefreshRooms.addEventListener('click', () => {
       renderPublicRoomsGrid();
       showToast("Список открытых игр обновлен");
+    });
+  }
+
+  // Debate 1v1 Chat Send & Sample Handlers
+  const btnChatSend = document.getElementById('btn-chat-send');
+  const btnChatSample = document.getElementById('btn-chat-sample');
+  const debateChatInput = document.getElementById('debate-message-input');
+
+  function sendChatMessage() {
+    if (!debateChatInput) return;
+    const text = debateChatInput.value.trim();
+    if (!text) return;
+
+    if (!activeRoomData.chat_messages) activeRoomData.chat_messages = [];
+
+    const myName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (activeRoomData.creator_name || 'Дебатер');
+    const isGov = activeRoomData.p1_name === myName;
+    const role = isGov ? 'Правительство' : 'Оппозиция';
+
+    activeRoomData.chat_messages.push({
+      author: myName,
+      role: role,
+      text: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+
+    debateChatInput.value = '';
+    renderDebateChatStream();
+    syncChatToSpeechInputs();
+  }
+
+  if (btnChatSend) btnChatSend.addEventListener('click', sendChatMessage);
+  if (debateChatInput) {
+    debateChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        sendChatMessage();
+      }
+    });
+  }
+
+  if (btnChatSample) {
+    btnChatSample.addEventListener('click', () => {
+      if (!debateChatInput) return;
+      const myName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (activeRoomData.creator_name || 'Дебатер');
+      const isGov = activeRoomData.p1_name === myName;
+      debateChatInput.value = isGov ? SAMPLE_ROOM_SPEECHES.p1 : SAMPLE_ROOM_SPEECHES.p2;
+      showToast("Пример речи вставлен в поле ввода");
     });
   }
 
@@ -2344,6 +2460,113 @@ function initRoomsMode() {
   }
 }
 
+// MATCHING LOGIC: Assigns roles randomly, generates/reveals resolution, starts 10-min prep
+function matchPlayersInRoom(room, opponentName, startPrepCallback) {
+  const creatorName = room.creator_name || 'Дебатер 1';
+  const responderName = opponentName || (currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер 2');
+
+  // RANDOM ROLES LOTTERY (50/50 chance for who gets Government vs Opposition)
+  const creatorIsGov = Math.random() < 0.5;
+  if (creatorIsGov) {
+    room.p1_name = creatorName;
+    room.p2_name = responderName;
+  } else {
+    room.p1_name = responderName;
+    room.p2_name = creatorName;
+  }
+
+  room.status = 'matched';
+  room.is_revealed = true; // Resolution is immediately revealed when both entered!
+
+  if (!room.chat_messages) room.chat_messages = [];
+  room.chat_messages.push({
+    isSystem: true,
+    text: `Соперник ${responderName} вошел в комнату. Жеребьевка: Правительство — ${room.p1_name}, Оппозиция — ${room.p2_name}. Резолюция открыта! Началась подготовка (10 минут).`
+  });
+
+  // Remove from public rooms list
+  let rooms = getStoredPublicRooms();
+  rooms = rooms.filter(r => r.code !== room.code);
+  saveStoredPublicRooms(rooms);
+
+  // Save to user profile & sync with cloud
+  saveUserActiveMatch(room);
+  syncRoomUpdateToSupabase(room);
+
+  loadRoomIntoArena(room);
+  renderPublicRoomsGrid();
+
+  if (typeof startPrepCallback === 'function') {
+    startPrepCallback();
+  } else {
+    const btnToggle = document.getElementById('btn-toggle-prep-timer');
+    if (btnToggle) btnToggle.click();
+  }
+
+  const myName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : creatorName;
+  const myRole = room.p1_name === myName ? "Правительство" : "Оппозиция";
+  showToast(`Соперник вошел! Ваша роль: ${myRole}. Запущен таймер подготовки на 10 минут!`, 6000);
+}
+
+function syncChatToSpeechInputs() {
+  const p1SpeechEl = document.getElementById('p1-speech');
+  const p2SpeechEl = document.getElementById('p2-speech');
+  const p1NameEl = document.getElementById('p1-name');
+  const p2NameEl = document.getElementById('p2-name');
+
+  if (p1NameEl) p1NameEl.value = activeRoomData.p1_name || 'Правительство';
+  if (p2NameEl) p2NameEl.value = activeRoomData.p2_name || 'Оппозиция';
+
+  if (!activeRoomData.chat_messages) return;
+
+  const govTexts = activeRoomData.chat_messages
+    .filter(m => !m.isSystem && m.role === 'Правительство')
+    .map(m => m.text);
+  const oppTexts = activeRoomData.chat_messages
+    .filter(m => !m.isSystem && m.role === 'Оппозиция')
+    .map(m => m.text);
+
+  if (p1SpeechEl) p1SpeechEl.value = govTexts.join('\n\n');
+  if (p2SpeechEl) p2SpeechEl.value = oppTexts.join('\n\n');
+}
+
+function renderDebateChatStream() {
+  const stream = document.getElementById('debate-chat-stream');
+  if (!stream) return;
+
+  const messages = activeRoomData.chat_messages || [];
+  if (messages.length === 0) {
+    stream.innerHTML = `
+      <div class="chat-bubble-system">
+        Комната готова. После подготовки отправляйте тезисы и речи в чат раунда.
+      </div>
+    `;
+    return;
+  }
+
+  stream.innerHTML = messages.map(msg => {
+    if (msg.isSystem) {
+      return `<div class="chat-bubble-system">${escapeHtml(msg.text)}</div>`;
+    }
+    const isGov = msg.role === 'Правительство';
+    const bubbleClass = isGov ? 'chat-bubble-gov' : 'chat-bubble-opp';
+    const badgeClass = isGov ? 'gov-badge' : 'opp-badge';
+
+    return `
+      <div class="chat-message-bubble ${bubbleClass}">
+        <div class="chat-author-line">
+          <span class="chamber-badge ${badgeClass}">${escapeHtml(msg.role)}</span>
+          <strong>${escapeHtml(msg.author)}</strong>
+          <span class="text-muted" style="margin-left:auto; font-size:0.75rem;">${msg.time || ''}</span>
+        </div>
+        <div class="chat-bubble-text">${escapeHtml(msg.text)}</div>
+      </div>
+    `;
+  }).join('');
+
+  stream.scrollTop = stream.scrollHeight;
+}
+
 function loadRoomIntoArena(room) {
   const codeEl = document.getElementById('current-room-code');
   const typeBadge = document.getElementById('current-room-type-badge');
@@ -2354,28 +2577,36 @@ function loadRoomIntoArena(room) {
   const btnForceReveal = document.getElementById('btn-force-reveal-topic');
   const p1Tag = document.getElementById('p1-display-tag');
   const p2Tag = document.getElementById('p2-display-tag');
-  const p1Input = document.getElementById('p1-name');
-  const p2Input = document.getElementById('p2-name');
   const btnClaim = document.getElementById('btn-claim-opp-slot');
 
+  const waitingState = document.getElementById('arena-waiting-state');
+  const activeMatchState = document.getElementById('arena-active-match');
+  const directLinkInput = document.getElementById('arena-room-direct-link');
+
   if (codeEl) codeEl.textContent = room.code;
+
+  // Set direct link
+  const directLink = `${window.location.origin}${window.location.pathname}?room=${room.code}`;
+  if (directLinkInput) directLinkInput.value = directLink;
 
   // Category and resolution reveal state
   const categoryName = room.category_name || getCategoryName(room.category || 'education');
   if (catBadge) catBadge.textContent = categoryName;
 
-  // If resolution is revealed (e.g. within 15 min or manually revealed)
-  if (room.is_revealed) {
+  const isMatched = !!(room.p1_name && room.p2_name);
+
+  // If matched or revealed
+  if (room.is_revealed || isMatched) {
     if (topicEl) topicEl.textContent = room.topic;
     if (resBadge) {
-      resBadge.textContent = "Резолюция открыта (15 мин)";
+      resBadge.textContent = "Резолюция открыта";
       resBadge.className = "resolution-unlocked-badge";
     }
     if (btnForceReveal) btnForceReveal.classList.add('hidden');
   } else {
     if (topicEl) topicEl.textContent = `Сфера: ${categoryName}`;
     if (resBadge) {
-      resBadge.textContent = "Скрыта до подготовки";
+      resBadge.textContent = "Скрыта до входа соперника";
       resBadge.className = "resolution-lock-badge";
     }
     if (btnForceReveal) {
@@ -2394,13 +2625,8 @@ function loadRoomIntoArena(room) {
   }
 
   if (typeBadge) {
-    if (room.room_type === 'private') {
-      typeBadge.textContent = "Закрытая (QR / Ссылка)";
-      typeBadge.className = "room-privacy-badge private-badge";
-    } else {
-      typeBadge.textContent = "Открытая (Витрина)";
-      typeBadge.className = "room-privacy-badge public-badge";
-    }
+    typeBadge.textContent = "Комната дебатов";
+    typeBadge.className = "room-privacy-badge private-badge";
   }
 
   if (timeEl) {
@@ -2409,12 +2635,15 @@ function loadRoomIntoArena(room) {
 
   const p1RoleBadge = document.getElementById('p1-role-badge');
   const p2RoleBadge = document.getElementById('p2-role-badge');
-  const chamberBadge1 = document.getElementById('chamber-badge-p1');
-  const chamberBadge2 = document.getElementById('chamber-badge-p2');
-
-  const isMatched = !!(room.p1_name && room.p2_name);
+  const chatBadgeGov = document.getElementById('chat-badge-gov');
+  const chatBadgeOpp = document.getElementById('chat-badge-opp');
+  const composeUserRole = document.getElementById('compose-user-role');
+  const composeUserName = document.getElementById('compose-user-name');
 
   if (isMatched) {
+    if (waitingState) waitingState.classList.add('hidden');
+    if (activeMatchState) activeMatchState.classList.remove('hidden');
+
     if (p1RoleBadge) {
       p1RoleBadge.textContent = "Правительство:";
       p1RoleBadge.className = "pairing-role gov-text";
@@ -2423,20 +2652,24 @@ function loadRoomIntoArena(room) {
       p2RoleBadge.textContent = "Оппозиция:";
       p2RoleBadge.className = "pairing-role opp-text";
     }
-    if (chamberBadge1) {
-      chamberBadge1.textContent = "Правительство";
-      chamberBadge1.className = "chamber-badge gov-badge";
-    }
-    if (chamberBadge2) {
-      chamberBadge2.textContent = "Оппозиция";
-      chamberBadge2.className = "chamber-badge opp-badge";
-    }
     if (p1Tag) p1Tag.textContent = room.p1_name;
-    if (p1Input) p1Input.value = room.p1_name;
     if (p2Tag) p2Tag.textContent = room.p2_name;
-    if (p2Input) p2Input.value = room.p2_name;
+
+    if (chatBadgeGov) chatBadgeGov.textContent = `Правительство: ${room.p1_name}`;
+    if (chatBadgeOpp) chatBadgeOpp.textContent = `Оппозиция: ${room.p2_name}`;
+
+    const myName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (room.creator_name || 'Дебатер');
+    const isGov = room.p1_name === myName;
+    if (composeUserRole) composeUserRole.textContent = isGov ? 'Правительство' : 'Оппозиция';
+    if (composeUserName) composeUserName.textContent = myName;
+
+    renderDebateChatStream();
+    syncChatToSpeechInputs();
   } else {
-    // Waiting for opponent - positions not yet assigned
+    // Waiting for opponent to enter
+    if (waitingState) waitingState.classList.remove('hidden');
+    if (activeMatchState) activeMatchState.classList.add('hidden');
+
     if (p1RoleBadge) {
       p1RoleBadge.textContent = "Создатель:";
       p1RoleBadge.className = "pairing-role";
@@ -2445,18 +2678,8 @@ function loadRoomIntoArena(room) {
       p2RoleBadge.textContent = "Соперник:";
       p2RoleBadge.className = "pairing-role";
     }
-    if (chamberBadge1) {
-      chamberBadge1.textContent = "Палата определится жеребьевкой";
-      chamberBadge1.className = "chamber-badge";
-    }
-    if (chamberBadge2) {
-      chamberBadge2.textContent = "Палата определится жеребьевкой";
-      chamberBadge2.className = "chamber-badge";
-    }
     if (p1Tag) p1Tag.textContent = room.creator_name || "Создатель игры";
-    if (p1Input) p1Input.value = room.creator_name || "";
     if (p2Tag) p2Tag.textContent = "Ожидание соперника...";
-    if (p2Input) p2Input.value = "";
   }
 
   if (btnClaim) {
@@ -2473,21 +2696,34 @@ function joinRoomByCode(code) {
   let found = rooms.find(r => r.code === code);
 
   if (!found) {
-    // If closed or unlisted room, create session entry for this code
+    // If entered via direct URL link
+    const categories = Object.keys(DEBATE_CATEGORIES);
+    const catKey = categories[Math.floor(Math.random() * categories.length)];
+    const catName = getCategoryName(catKey);
     found = {
       code: code,
-      topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
-      room_type: code.startsWith('ROOM-P') ? "private" : "private",
+      category: catKey,
+      category_name: catName,
+      topic: getRandomResolutionForCategory(catKey),
+      room_type: "private",
       scheduled_time: "Сразу после подключения",
       creator_name: "Пригласивший дебатер",
-      p1_name: "Спикер 1",
-      p2_name: currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : null,
-      status: "waiting"
+      p1_name: null,
+      p2_name: null,
+      status: "waiting",
+      chat_messages: []
     };
   }
 
   activeRoomData = found;
-  loadRoomIntoArena(activeRoomData);
+
+  // If opponent entered room directly through URL and it is waiting for opponent
+  const currentVisitor = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Гость-соперник';
+  if (activeRoomData.status === 'waiting' && activeRoomData.creator_name !== currentVisitor) {
+    matchPlayersInRoom(activeRoomData, currentVisitor);
+  } else {
+    loadRoomIntoArena(activeRoomData);
+  }
 
   // Switch to Arena tab
   const tabArena = document.getElementById('tab-open-arena');
@@ -2509,48 +2745,7 @@ function respondToPublicRoom(roomCode) {
   if (!room) return;
 
   const responderName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер';
-  const creatorName = room.creator_name || room.p1_name || 'Дебатер 1';
-
-  // RANDOM CHAMBER LOTTERY (50/50 chance for who gets Government vs Opposition)
-  const creatorIsGov = Math.random() < 0.5;
-  if (creatorIsGov) {
-    room.p1_name = creatorName;
-    room.p2_name = responderName;
-  } else {
-    room.p1_name = responderName;
-    room.p2_name = creatorName;
-  }
-
-  // Once opponent responds, the room becomes closed/private and disappears from the public showcase
-  room.room_type = 'private';
-  room.status = 'matched';
-
-  // Filter out this newly closed room from the public showcase list
-  rooms = rooms.filter(r => r.code !== roomCode);
-  saveStoredPublicRooms(rooms);
-
-  // Save as active room in user profile
-  saveUserActiveMatch(room);
-
-  activeRoomData = room;
-  loadRoomIntoArena(activeRoomData);
-
-  // Sync to Supabase if connected
-  syncRoomUpdateToSupabase(room);
-
-  // Open Arena view
-  const tabArena = document.getElementById('tab-open-arena');
-  const tabLobby = document.getElementById('tab-open-lobby');
-  const sectionLobby = document.getElementById('section-rooms-lobby');
-  const sectionArena = document.getElementById('section-rooms-arena');
-
-  if (tabArena) tabArena.classList.add('active');
-  if (tabLobby) tabLobby.classList.remove('active');
-  if (sectionArena) sectionArena.classList.remove('hidden');
-  if (sectionLobby) sectionLobby.classList.add('hidden');
-
-  renderPublicRoomsGrid();
-  showToast(`Вы приняли вызов! Комната ${room.code} теперь закрыта. Ссылка сохранена в вашем Кабинете!`, 4000);
+  matchPlayersInRoom(room, responderName);
 }
 
 function saveUserActiveMatch(room) {
