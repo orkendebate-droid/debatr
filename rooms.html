@@ -91,23 +91,23 @@
       <div id="section-rooms-arena" class="rooms-section hidden">
         
         <!-- ROOM SETUP CARD: Configured when clicking 'Арена 1 на 1' -->
-        <div class="glass-card room-setup-card" id="arena-config-card">
+        <div class="room-setup-card" id="arena-config-card">
           <div class="room-setup-header">
-            <h3>Настройка комнаты</h3>
-            <span class="text-muted" style="font-size:0.85rem;">Укажите параметры перед началом раунда</span>
+            <h3>Создание комнаты 1 на 1</h3>
+            <span class="setup-subtitle">Параметры дуэли и подбора соперника</span>
           </div>
           
           <div class="room-setup-body">
             <!-- 1. Room Visibility (Open vs Closed) -->
             <div class="form-group">
-              <label class="form-label">Тип комнаты:</label>
+              <label class="form-label">Тип доступа:</label>
               <div class="room-type-toggle">
                 <label class="room-type-option">
                   <input type="radio" name="arena-cfg-type" value="public" checked>
                   <div class="room-type-card">
                     <div class="type-text">
                       <strong>Открытая</strong>
-                      <span>Видна в общем списке для всех дебатеров</span>
+                      <span>В общем списке лобби</span>
                     </div>
                   </div>
                 </label>
@@ -116,7 +116,7 @@
                   <div class="room-type-card">
                     <div class="type-text">
                       <strong>Закрытая</strong>
-                      <span>Доступна только по прямой ссылке сопернику</span>
+                      <span>Прямая ссылка сопернику</span>
                     </div>
                   </div>
                 </label>
@@ -125,7 +125,7 @@
 
             <!-- 2. Topic Category -->
             <div class="form-group">
-              <label class="form-label" for="arena-cfg-category">Тема / Сфера:</label>
+              <label class="form-label" for="arena-cfg-category">Сфера / Тема:</label>
               <select id="arena-cfg-category" class="form-input form-select">
                 <option value="education">Образование и школа</option>
                 <option value="tech">Технологии и ИИ</option>
@@ -138,7 +138,7 @@
 
             <!-- 3. Skill Level (Начальный, Средний, Высокий) -->
             <div class="form-group">
-              <label class="form-label">Уровень:</label>
+              <label class="form-label">Уровень сложности:</label>
               <div class="arena-level-pills">
                 <button type="button" class="arena-level-pill-btn active" data-level="beginner">Начальный</button>
                 <button type="button" class="arena-level-pill-btn" data-level="intermediate">Средний</button>
@@ -153,13 +153,14 @@
                 <input type="date" id="arena-cfg-date" class="form-input">
               </div>
               <div class="form-group">
-                <label class="form-label" for="arena-cfg-time">Время:</label>
+                <label class="form-label" for="arena-cfg-time">Время старта:</label>
                 <input type="time" id="arena-cfg-time" class="form-input" value="19:00">
+              </div>
             </div>
-          </div>
 
-          <div class="room-setup-footer">
-            <button class="btn-primary btn-large" id="btn-arena-start-create">Создать комнату</button>
+            <div class="room-setup-footer">
+              <button class="btn-primary btn-large btn-block" id="btn-arena-start-create">Создать комнату</button>
+            </div>
           </div>
         </div>
 
