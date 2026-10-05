@@ -63,17 +63,73 @@ const DEBATE_CATEGORIES = {
       "ЭП введет обязательную квоту для молодежи и начинающих специалистов в органах законодательной власти.",
       "ЭП считает, что персональные биометрические данные не могут быть предметом коммерческой монетизации."
     ]
+  },
+  politics: {
+    name: "Политика и право",
+    resolutions: [
+      "ЭП снизит возрастной избирательный ценз на парламентских выборах до 16 лет.",
+      "ЭП отменит право вето постоянных членов Совета Безопасности ООН при решении гуманитарных кризисов.",
+      "ЭП введет полную государственную монополию на финансирование политических предвыборных кампаний.",
+      "ЭП считает, что прямая цифровая демократия превосходит представительный парламентаризм."
+    ]
   }
 };
 
 function getCategoryName(categoryKey) {
-  return DEBATE_CATEGORIES[categoryKey]?.name || "Образование и школа";
+  const normKey = categoryKey === 'tech' ? 'ai_tech' : (categoryKey === 'economics' ? 'economy' : categoryKey);
+  return DEBATE_CATEGORIES[normKey]?.name || "ИИ и технологии";
 }
 
 function getRandomResolutionForCategory(categoryKey) {
-  const cat = DEBATE_CATEGORIES[categoryKey] || DEBATE_CATEGORIES.education;
+  const normKey = categoryKey === 'tech' ? 'ai_tech' : (categoryKey === 'economics' ? 'economy' : categoryKey);
+  const cat = DEBATE_CATEGORIES[normKey] || DEBATE_CATEGORIES.ai_tech;
   const list = cat.resolutions;
   return list[Math.floor(Math.random() * list.length)];
+}
+
+async function generateResolutionWithAI(categoryKey) {
+  const normKey = categoryKey === 'tech' ? 'ai_tech' : (categoryKey === 'economics' ? 'economy' : categoryKey);
+  const catName = getCategoryName(normKey);
+  const apiKey = localStorage.getItem('debatr_ai_key') || '';
+
+  if (!apiKey) {
+    return getRandomResolutionForCategory(normKey);
+  }
+
+  const prompt = `Ты главный судья и главный формулировщик тем турниров по парламентским дебатам (форматы WUDC, BP, Линкольн-Дуглас).
+Сформулируй ровно ОДНУ острую, сбалансированную и актуальную резолюцию для дебатов по теме: "${catName}".
+Формат резолюции строго: "ЭП [глагол действия или оценка] ...", например: "ЭП запретит развитие автономных боевых систем ИИ." или "ЭП считает, что...".
+Не пиши вводных слов, пояснений или кавычек. Выведи строго только саму резолюцию.`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.85,
+        max_tokens: 80
+      })
+    });
+
+    if (!response.ok) {
+      return getRandomResolutionForCategory(normKey);
+    }
+    const data = await response.json();
+    let text = (data.choices[0]?.message?.content || "").trim();
+    text = text.replace(/^["'«]+|["'»]+$/g, '').trim();
+    if (!text.startsWith("ЭП")) {
+      text = "ЭП считает, что " + text.charAt(0).toLowerCase() + text.slice(1);
+    }
+    return text || getRandomResolutionForCategory(normKey);
+  } catch (e) {
+    console.warn("AI resolution generation error, using fallback:", e);
+    return getRandomResolutionForCategory(normKey);
+  }
 }
 
 const EXERCISE_CONFIG = {
@@ -1307,6 +1363,10 @@ function initBattleMode() {
   const btnFinishEarly = document.getElementById('btn-finish-battle-early');
   const btnNewRound = document.getElementById('btn-battle-new-round');
 
+  const selectCategory = document.getElementById('setup-category-select');
+  const timerBtns = document.querySelectorAll('#setup-timer-selector .setup-timer-btn');
+  let selectedRoundDurationSec = 240; // default 4 min
+
   // Level selector
   levelBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1314,6 +1374,16 @@ function initBattleMode() {
       btn.classList.add('active');
       selectedPersona = btn.getAttribute('data-level') || 'novice';
       showToast('Уровень: ' + (PERSONA_CONFIGS[selectedPersona]?.name || selectedPersona));
+    });
+  });
+
+  // Timer selector in setup
+  timerBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      timerBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedRoundDurationSec = parseInt(btn.getAttribute('data-sec'), 10) || 240;
+      showToast('Время раунда: ' + Math.floor(selectedRoundDurationSec / 60) + ' мин');
     });
   });
 
@@ -1326,12 +1396,43 @@ function initBattleMode() {
     });
   });
 
-  // Random topic in setup
+  // AI-powered resolution generator by selected category
   if (btnRandomTopic && topicInput) {
-    btnRandomTopic.addEventListener('click', () => {
-      currentTopicIndex = (currentTopicIndex + 1) % DEBATE_TOPICS.length;
-      topicInput.value = DEBATE_TOPICS[currentTopicIndex];
-      showToast("Тема обновлена");
+    btnRandomTopic.addEventListener('click', async () => {
+      const catKey = selectCategory ? selectCategory.value : 'ai_tech';
+      const labelEl = document.getElementById('btn-generate-topic-label');
+      if (labelEl) labelEl.textContent = "Генерация...";
+      btnRandomTopic.disabled = true;
+
+      try {
+        const aiResolution = await generateResolutionWithAI(catKey);
+        topicInput.value = aiResolution;
+        showToast("Резолюция сгенерирована нейросетью");
+      } catch (err) {
+        topicInput.value = getRandomResolutionForCategory(catKey);
+        showToast("Тема обновлена");
+      } finally {
+        if (labelEl) labelEl.textContent = "Сгенерировать ИИ";
+        btnRandomTopic.disabled = false;
+      }
+    });
+  }
+
+  // When changing category in setup, immediately generate or pick a fresh resolution
+  if (selectCategory && topicInput) {
+    selectCategory.addEventListener('change', async () => {
+      const catKey = selectCategory.value;
+      const labelEl = document.getElementById('btn-generate-topic-label');
+      if (labelEl) labelEl.textContent = "Генерация...";
+      try {
+        const aiResolution = await generateResolutionWithAI(catKey);
+        topicInput.value = aiResolution;
+        showToast("Тема обновлена: " + getCategoryName(catKey));
+      } catch (_) {
+        topicInput.value = getRandomResolutionForCategory(catKey);
+      } finally {
+        if (labelEl) labelEl.textContent = "Сгенерировать ИИ";
+      }
     });
   }
 
@@ -1347,6 +1448,35 @@ function initBattleMode() {
       } else {
         battleUserRole = selectedRoleSetting;
       }
+
+      // Sync chosen timer with active debate timer
+      timerTotalSeconds = selectedRoundDurationSec;
+      timerRemainingSeconds = selectedRoundDurationSec;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+      }
+      const activeTimerDisplay = document.getElementById('timer-display');
+      const activeTimerToggle = document.getElementById('btn-timer-toggle');
+      if (activeTimerDisplay) {
+        const m = Math.floor(timerRemainingSeconds / 60).toString().padStart(2, '0');
+        const s = (timerRemainingSeconds % 60).toString().padStart(2, '0');
+        activeTimerDisplay.textContent = `${m}:${s}`;
+        activeTimerDisplay.style.color = '';
+      }
+      if (activeTimerToggle) {
+        activeTimerToggle.textContent = "Старт";
+      }
+      // Highlight matching active time pill in chat top widget if exists
+      const timePillBtns = document.querySelectorAll('.time-pill-btn');
+      timePillBtns.forEach(p => {
+        const sec = parseInt(p.getAttribute('data-sec'), 10);
+        if (sec === selectedRoundDurationSec) {
+          p.classList.add('active');
+        } else {
+          p.classList.remove('active');
+        }
+      });
 
       // Update active view headers and badges
       const topicTextEl = document.getElementById('battle-topic-text');

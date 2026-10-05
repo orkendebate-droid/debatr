@@ -2477,4 +2477,38 @@ body {
   justify-content: flex-end;
 }
 
+/* AI Battle Setup Timer Pills */
+.setup-timer-pills {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.5rem;
+}
+
+.setup-timer-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.5rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.15s ease;
+  color: var(--text);
+}
+
+.setup-timer-btn:hover {
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.setup-timer-btn.active {
+  border-color: var(--primary);
+  background: var(--bg-subtle);
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
 
