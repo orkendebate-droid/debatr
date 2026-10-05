@@ -1919,40 +1919,7 @@ const SAMPLE_ROOM_SPEECHES = {
   p2: "Палата Оппозиции решительно против отмены стандартизированных тестов. Проектная оценка абсолютно субъективна: в ней невозможно исключить коррупционный фактор, помощь родителей или наем репетиторов для оформления портфолио. Единый тест — это единственный объективный социальный лифт для талантливых ребят из сельских школ и регионов, обеспечивающий равенство возможностей при поступлении."
 };
 
-// Initial mock public rooms for immediate demonstration
-const INITIAL_DEMO_ROOMS = [
-  {
-    code: "ROOM-721",
-    topic: "ЭП введет безусловный базовый доход, финансируемый налогом на роботизацию и автоматизацию труда.",
-    room_type: "public",
-    scheduled_time: "Сегодня в 19:30",
-    creator_name: "Арман С.",
-    p1_name: "Арман С.",
-    p2_name: null,
-    status: "waiting"
-  },
-  {
-    code: "ROOM-354",
-    topic: "ЭП считает, что развитие автономных систем ИИ должно жестко лицензироваться международным регулятором.",
-    room_type: "public",
-    scheduled_time: "Сегодня в 21:00",
-    creator_name: "Дамир К.",
-    p1_name: "Дамир К.",
-    p2_name: null,
-    status: "waiting"
-  },
-  {
-    code: "ROOM-912",
-    topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
-    room_type: "public",
-    scheduled_time: "Завтра в 17:00",
-    creator_name: "Айгерим М.",
-    p1_name: "Айгерим М.",
-    p2_name: null,
-    status: "waiting"
-  }
-];
-
+// Only real rooms created by users are shown; no fake mock games
 let activeRoomData = {
   code: "ROOM-842",
   topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
@@ -1971,7 +1938,7 @@ function getStoredPublicRooms() {
   } catch (e) {
     console.warn("Error parsing debatr_rooms_list:", e);
   }
-  return [...INITIAL_DEMO_ROOMS];
+  return [];
 }
 
 function saveStoredPublicRooms(rooms) {
@@ -2458,10 +2425,43 @@ async function syncRoomUpdateToSupabase(room) {
   }
 }
 
+async function fetchRealPublicRoomsFromSupabase() {
+  const supabaseUrl = localStorage.getItem('debatr_supabase_url');
+  const supabaseKey = localStorage.getItem('debatr_supabase_key');
+  if (supabaseUrl && supabaseKey && window.supabase) {
+    try {
+      const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+      const { data, error } = await client
+        .from('rooms')
+        .select('*')
+        .eq('room_type', 'public')
+        .eq('status', 'waiting')
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        const stored = getStoredPublicRooms();
+        // Merge real remote rooms with local non-mock rooms
+        const combined = [...data];
+        stored.forEach(sr => {
+          if (!combined.some(r => r.code === sr.code)) {
+            combined.push(sr);
+          }
+        });
+        saveStoredPublicRooms(combined);
+      }
+    } catch (e) {
+      console.warn("Error fetching live public rooms from Supabase:", e);
+    }
+  }
+}
+
 function renderPublicRoomsGrid() {
   const grid = document.getElementById('public-rooms-grid');
   const countLabel = document.getElementById('lobby-count-label');
   if (!grid) return;
+
+  // Asynchronously fetch real rooms from Supabase if connected
+  fetchRealPublicRoomsFromSupabase();
 
   const rooms = getStoredPublicRooms();
   if (countLabel) {
