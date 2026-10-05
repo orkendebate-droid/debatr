@@ -17,6 +17,65 @@ const DEBATE_TOPICS = [
   "ЭП считает, что научные исследования с открытым исходным кодом превосходят коммерческую патентную модель."
 ];
 
+// Debate Spheres / Categories with curated high-caliber resolutions
+const DEBATE_CATEGORIES = {
+  education: {
+    name: "🎓 Образование и школа",
+    resolutions: [
+      "ЭП отменит стандартизированное государственное тестирование в старшей школе в пользу портфолио проектов.",
+      "ЭП запретит использование смартфонов и личных гаджетов на уроках в школах.",
+      "ЭП заменит традиционные домашние задания практическими групповыми проектами.",
+      "ЭП обяжет университеты внедрять обязательные курсы критического мышления и фактчекинга."
+    ]
+  },
+  ecology: {
+    name: "🌱 Экология и климат",
+    resolutions: [
+      "ЭП введет прогрессивный углеродный налог на корпорации с полным отказом от субсидирования ископаемого топлива.",
+      "ЭП считает, что развитие атомной энергетики является безальтернативным решением глобального климатического кризиса.",
+      "ЭП запретит производство и продажу одноразовой пластиковой упаковки на государственном уровне.",
+      "ЭП возложит полную материальную ответственность за утилизацию отходов на производителей упаковки."
+    ]
+  },
+  ai_tech: {
+    name: "🤖 ИИ и технологии",
+    resolutions: [
+      "ЭП считает, что развитие автономных систем искусственного интеллекта должно жестко лицензироваться международным регулятором.",
+      "ЭП запретит разработку и внедрение систем социального кредита и алгоритмического скоринга граждан.",
+      "ЭП считает, что социальные сети несут прямую юридическую ответственность за вредоносный контент и дезинформацию.",
+      "ЭП признает авторские права на контент, созданный генеративным ИИ, общественным достоянием."
+    ]
+  },
+  economy: {
+    name: "💼 Экономика и рынок труда",
+    resolutions: [
+      "ЭП введет безусловный базовый доход, финансируемый налогом на роботизацию и автоматизацию рабочих мест.",
+      "ЭП перейдет на четырехдневную рабочую неделю без снижения заработной платы.",
+      "ЭП запретит монополизацию технологий гиперскейлерами через принудительное разделение цифровых гигантов.",
+      "ЭП считает, что государственные субсидии должны распределяться строго по принципу экологической и социальной ответственности."
+    ]
+  },
+  society: {
+    name: "⚖️ Общество, этика и право",
+    resolutions: [
+      "ЭП запретит таргетированную коммерческую рекламу, ориентированную на несовершеннолетнюю аудиторию.",
+      "ЭП отменит коммерческое патентование жизненно необходимых медицинских препаратов.",
+      "ЭП введет обязательную квоту для молодежи и начинающих специалистов в органах законодательной власти.",
+      "ЭП считает, что персональные биометрические данные не могут быть предметом коммерческой монетизации."
+    ]
+  }
+};
+
+function getCategoryName(categoryKey) {
+  return DEBATE_CATEGORIES[categoryKey]?.name || "🎓 Образование";
+}
+
+function getRandomResolutionForCategory(categoryKey) {
+  const cat = DEBATE_CATEGORIES[categoryKey] || DEBATE_CATEGORIES.education;
+  const list = cat.resolutions;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 const EXERCISE_CONFIG = {
   claim: {
     tip: "Сформулируйте ясный, однозначный и сильный тезис в пользу резолюции или против неё без лишней 'воды'.",
@@ -2056,12 +2115,16 @@ function initRoomsMode() {
     });
   }
 
+  const selectCategory = document.getElementById('select-room-category');
+
   // Handle Create Room submit
   if (btnSubmitCreateRoom) {
     btnSubmitCreateRoom.addEventListener('click', async () => {
       const selectedType = document.querySelector('input[name="modal-room-type"]:checked')?.value || 'public';
       const timeVal = (inputScheduledTime?.value || '').trim() || 'Сегодня в 19:00';
-      const topicVal = (inputRoomTopic?.value || '').trim() || DEBATE_TOPICS[0];
+      const categoryKey = selectCategory ? selectCategory.value : 'education';
+      const categoryName = getCategoryName(categoryKey);
+      const generatedResolution = getRandomResolutionForCategory(categoryKey);
       const creatorName = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
       const role = selectCreatorRole?.value || 'p1';
 
@@ -2069,7 +2132,10 @@ function initRoomsMode() {
 
       const newRoom = {
         code: code,
-        topic: topicVal,
+        category: categoryKey,
+        category_name: categoryName,
+        topic: generatedResolution, // The resolution
+        is_revealed: false,          // Reveals 15 min before match
         room_type: selectedType,
         scheduled_time: timeVal,
         creator_name: creatorName,
@@ -2112,10 +2178,10 @@ function initRoomsMode() {
       showSection('arena');
 
       if (selectedType === 'private') {
-        showToast(`Создана закрытая комната ${code}! Отправьте ссылку или QR оппоненту.`);
+        showToast(`Создана закрытая комната ${code} по теме «${categoryName}»! Отправьте ссылку или QR.`);
         setTimeout(() => openQrModal(code), 300);
       } else {
-        showToast(`Открытая комната ${code} опубликована на ${timeVal}!`);
+        showToast(`Комната ${code} («${categoryName}») открыта на ${timeVal}! Резолюция откроется за 15 мин.`);
       }
     });
   }
@@ -2272,6 +2338,9 @@ function loadRoomIntoArena(room) {
   const typeBadge = document.getElementById('current-room-type-badge');
   const timeEl = document.getElementById('current-room-time');
   const topicEl = document.getElementById('room-topic-display');
+  const catBadge = document.getElementById('room-category-badge');
+  const resBadge = document.getElementById('room-resolution-status-badge');
+  const btnForceReveal = document.getElementById('btn-force-reveal-topic');
   const p1Tag = document.getElementById('p1-display-tag');
   const p2Tag = document.getElementById('p2-display-tag');
   const p1Input = document.getElementById('p1-name');
@@ -2279,7 +2348,39 @@ function loadRoomIntoArena(room) {
   const btnClaim = document.getElementById('btn-claim-opp-slot');
 
   if (codeEl) codeEl.textContent = room.code;
-  if (topicEl) topicEl.textContent = room.topic;
+
+  // Category and resolution reveal state
+  const categoryName = room.category_name || getCategoryName(room.category || 'education');
+  if (catBadge) catBadge.textContent = categoryName;
+
+  // If resolution is revealed (e.g. within 15 min or manually revealed)
+  if (room.is_revealed) {
+    if (topicEl) topicEl.textContent = room.topic;
+    if (resBadge) {
+      resBadge.textContent = "🔓 Резолюция открыта (Раунд подготовки)";
+      resBadge.className = "resolution-unlocked-badge";
+    }
+    if (btnForceReveal) btnForceReveal.classList.add('hidden');
+  } else {
+    if (topicEl) topicEl.textContent = `Сфера: «${categoryName}». Точная резолюция дебатов генерируется и открывается за 15 минут до раунда!`;
+    if (resBadge) {
+      resBadge.textContent = "🔒 Скрыта до Prep Time (за 15 мин)";
+      resBadge.className = "resolution-lock-badge";
+    }
+    if (btnForceReveal) {
+      btnForceReveal.classList.remove('hidden');
+      btnForceReveal.onclick = () => {
+        room.is_revealed = true;
+        if (topicEl) topicEl.textContent = room.topic;
+        if (resBadge) {
+          resBadge.textContent = "🔓 Резолюция открыта (15 мин на подготовку)";
+          resBadge.className = "resolution-unlocked-badge";
+        }
+        btnForceReveal.classList.add('hidden');
+        showToast("Резолюция открыта! 15 минут на подготовку речей.");
+      };
+    }
+  }
 
   if (typeBadge) {
     if (room.room_type === 'private') {
@@ -2496,7 +2597,13 @@ function renderPublicRoomsGrid() {
         </div>
 
         <div class="public-room-topic" title="${escapeHtml(room.topic)}">
-          ${escapeHtml(room.topic)}
+          <div class="card-category-row">
+            <span class="topic-category-badge">${escapeHtml(room.category_name || getCategoryName(room.category || 'education'))}</span>
+            <span class="prep-timer-pill">Prep 15м</span>
+          </div>
+          <p class="topic-preview-text">
+            ${room.is_revealed ? escapeHtml(room.topic) : 'Резолюция будет объявлена ровно за 15 минут до раунда для подготовки.'}
+          </p>
         </div>
 
         <div class="public-room-participants">

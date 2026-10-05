@@ -134,9 +134,20 @@
             </div>
           </div>
 
-          <div class="room-topic-bar">
-            <strong>Тема:</strong>
-            <span id="room-topic-display">ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.</span>
+          <div class="room-topic-bar" id="room-topic-bar-container">
+            <div class="room-topic-header-line">
+              <div class="topic-category-badge-box">
+                <span class="topic-category-badge" id="room-category-badge">🎓 Образование</span>
+                <span class="resolution-lock-badge" id="room-resolution-status-badge">🔒 Резолюция генерируется за 15 мин</span>
+              </div>
+              <button class="btn-xs btn-subtle" id="btn-force-reveal-topic" title="Сгенерировать и открыть тему раунда сейчас">
+                ⚡ Открыть тему (Тест/Старт)
+              </button>
+            </div>
+            <div class="topic-resolution-content">
+              <strong>Тема:</strong>
+              <span id="room-topic-display">Тема будет открыта за 15 минут до раунда для подготовки речей...</span>
+            </div>
           </div>
 
           <!-- Room Players Status Bar -->
@@ -294,13 +305,20 @@
           </div>
         </div>
 
-        <!-- Topic Selection -->
+        <!-- Debate Category Selection (Resolution generated 15m before match) -->
         <div class="form-group">
-          <div class="label-with-action">
-            <label class="form-label" for="input-room-topic">Тема дебатов (Резолюция):</label>
-            <button type="button" class="btn-text-tiny" id="btn-modal-random-topic">Случайная тема</button>
+          <label class="form-label" for="select-room-category">Сфера / Тематика дебатов:</label>
+          <select id="select-room-category" class="form-input">
+            <option value="education">🎓 Образование и школа</option>
+            <option value="ecology">🌱 Экология и климат</option>
+            <option value="ai_tech">🤖 Искусственный интеллект и технологии</option>
+            <option value="economy">💼 Экономика и рынок труда</option>
+            <option value="society">⚖️ Общество, этика и право</option>
+          </select>
+          <div class="category-prep-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>По правилам дебатов точная резолюция будет сгенерирована и открыта ровно <strong>за 15 минут</strong> до начала матча для раунда подготовки (Prep Time).</span>
           </div>
-          <textarea id="input-room-topic" class="form-input" rows="3" placeholder="Введите тему или нажмите «Случайная тема»"></textarea>
         </div>
 
         <!-- Creator Name / Chamber -->
