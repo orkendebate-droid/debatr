@@ -2120,7 +2120,16 @@ async function judgeBattleWithAI(userSpeech, aiSpeech, topic, userRole) {
 
 Оцени пользователя по Debatr Rubric (0.0-9.0, шаг 0.5):
 1. structure, 2. evidence, 3. rebuttal, 4. clarity, 5. originality.
-Вычисли общий балл overall.
+
+ПРИНЦИПЫ ЧЕСТНОГО И КАЛИБРОВАННОГО СУДЕЙСТВА:
+- Ставь оценки по качеству именно представленных речей и по тому, насколько они доказывают позицию и выигрывают ключевой clash. Не подменяй судейство общим впечатлением или вежливой похвалой.
+- Используй весь диапазон 0.0–9.0 по мере соответствия качеству. Не тяни оценки к середине и не ставь 6–7 «по умолчанию»; средний балл уместен только когда речь действительно среднего уровня. Не распределяй оценки искусственно по диапазону.
+- Якоря шкалы: 0.0–2.0 — почти нет релевантной аргументации или речь не отвечает задаче; 2.5–4.0 — серьёзные пробелы в логике, доказательствах или ответе сопернику; 4.5–6.0 — частично убедительная речь с заметными ограничениями; 6.5–7.5 — сильная, в основном обоснованная речь; 8.0–9.0 — исключительная, точная и убедительная речь с глубоким сравнительным анализом. Выбирай шаг 0.5 внутри диапазона по конкретному качеству.
+- Оценивай каждый критерий отдельно по его содержанию. Не повышай evidence за уверенный тон, количество слов или неподкреплённые заявления: учитывай конкретность, релевантность и объяснение доказательств; если проверяемых фактов в речи нет, отражай это в балле evidence.
+- Высокий балл требует явных оснований в речи; слабое или отсутствующее исполнение должно получать низкий балл. Не завышай оценки из-за старания, красноречия или самого факта участия.
+- Общий балл overall рассчитай как среднее пяти оценок, округлённое до ближайших 0.5. Победителя определи по тому, чья сторона убедительнее выиграла столкновение аргументов, а не автоматически по более гладкой речи.
+- В strengths и advice кратко укажи конкретные элементы речи, которые обосновывают оценку, и практичный следующий шаг. Не выдумывай факты или ссылки, которых нет в речах.
+
 Определи победителя раунда, краткий анализ клэша, сильную сторону и совет.
 
 Верни строго JSON объект:
@@ -2150,7 +2159,32 @@ async function judgeBattleWithAI(userSpeech, aiSpeech, topic, userRole) {
       maxTokens: 1100
     });
     const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    const scoreKeys = ['structure', 'evidence', 'rebuttal', 'clarity', 'originality'];
+    const scores = {};
+    for (const key of scoreKeys) {
+      const score = Number(parsed.scores && parsed.scores[key]);
+      if (!Number.isFinite(score)) throw new Error(`Invalid judge score: ${key}`);
+      scores[key] = Math.min(9, Math.max(0, Math.round(score * 2) / 2));
+    }
+
+    const overall = Math.round((scoreKeys.reduce((sum, key) => sum + scores[key], 0) / scoreKeys.length) * 2) / 2;
+    const expectedWinner = userRole === 'gov' ? 'Правительство' : 'Оппозиция';
+    const otherWinner = userRole === 'gov' ? 'Оппозиция' : 'Правительство';
+    const winner = parsed.winner === expectedWinner || parsed.winner === otherWinner
+      ? parsed.winner
+      : expectedWinner;
+
+    return {
+      ...parsed,
+      winner,
+      clash: String(parsed.clash || 'Сравнение аргументов раунда не сформировано.'),
+      overall,
+      band: `Band ${overall.toFixed(1)}`,
+      scores,
+      strengths: String(parsed.strengths || 'Недостаточно конкретики для выделения сильной стороны.'),
+      advice: String(parsed.advice || 'Сформулируйте тезис, механизм и подтверждающий его пример.')
+    };
   } catch (err) {
     console.warn("Judge API call failed, using fallback:", err);
     return judgeBattleFallback(userSpeech, aiSpeech, userRole);
