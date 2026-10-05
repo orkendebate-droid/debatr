@@ -70,17 +70,12 @@
 
       <!-- SECTION 1: PUBLIC ROOMS LOBBY & SCHEDULE -->
       <div id="section-rooms-lobby" class="rooms-section">
-        <div class="lobby-banner glass-card">
+        <div class="lobby-banner glass-card" style="padding: 0.85rem 1.25rem;">
           <div class="lobby-banner-info">
-            <h2>Доска открытых дебатов</h2>
-            <p class="text-muted">Создавайте открытую игру, указывайте дату и время дебатов. Любой дебатер может откликнуться, принять вызов и сыграть с вами в назначенный час!</p>
+            <h2 style="font-size: 1.15rem; margin-bottom: 0;">Открытые дебаты</h2>
           </div>
           <div class="lobby-banner-actions">
-            <button class="btn-primary" id="btn-banner-create">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <span>Назначить открытые дебаты</span>
-            </button>
-            <button class="btn-secondary" id="btn-refresh-rooms">
+            <button class="btn-secondary btn-sm" id="btn-refresh-rooms">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
               <span>Обновить</span>
             </button>
@@ -138,15 +133,14 @@
             <div class="room-topic-header-line">
               <div class="topic-category-badge-box">
                 <span class="topic-category-badge" id="room-category-badge">Образование</span>
-                <span class="resolution-lock-badge" id="room-resolution-status-badge">Тема откроется за 15 мин</span>
+                <span class="resolution-lock-badge" id="room-resolution-status-badge">Скрыта до подготовки</span>
               </div>
-              <button class="btn-xs btn-subtle" id="btn-force-reveal-topic" title="Открыть резолюцию сейчас">
+              <button class="btn-xs btn-subtle" id="btn-force-reveal-topic" title="Открыть резолюцию">
                 Открыть тему
               </button>
             </div>
             <div class="topic-resolution-content">
-              <strong>Тема:</strong>
-              <span id="room-topic-display">Ожидание раунда подготовки...</span>
+              <span id="room-topic-display">Сфера: Образование</span>
             </div>
           </div>
 
@@ -198,10 +192,8 @@
         <!-- Judge Control Center -->
         <div class="duel-judge-bar">
           <button class="btn-primary btn-large" id="btn-judge-duel">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <span>Оценить раунд (ИИ-судья)</span>
+            <span>Судейство раунда</span>
           </button>
-          <span class="text-muted" style="font-size:0.75rem;">Оценка аргументов по шкале 0.0 - 9.0</span>
         </div>
 
         <!-- Duel Results Display -->

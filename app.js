@@ -2370,9 +2370,9 @@ function loadRoomIntoArena(room) {
     }
     if (btnForceReveal) btnForceReveal.classList.add('hidden');
   } else {
-    if (topicEl) topicEl.textContent = `Сфера: ${categoryName}. Резолюция генерируется за 15 минут до раунда.`;
+    if (topicEl) topicEl.textContent = `Сфера: ${categoryName}`;
     if (resBadge) {
-      resBadge.textContent = "Скрыта до Prep Time";
+      resBadge.textContent = "Скрыта до подготовки";
       resBadge.className = "resolution-lock-badge";
     }
     if (btnForceReveal) {
