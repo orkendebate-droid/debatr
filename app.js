@@ -2126,7 +2126,6 @@ function initRoomsMode() {
       const categoryName = getCategoryName(categoryKey);
       const generatedResolution = getRandomResolutionForCategory(categoryKey);
       const creatorName = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
-      const role = selectCreatorRole?.value || 'p1';
 
       const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
 
@@ -2139,8 +2138,8 @@ function initRoomsMode() {
         room_type: selectedType,
         scheduled_time: timeVal,
         creator_name: creatorName,
-        p1_name: role === 'p1' ? creatorName : null,
-        p2_name: role === 'p2' ? creatorName : null,
+        p1_name: creatorName,        // Placed initially, will be randomized on match
+        p2_name: null,
         status: 'waiting'
       };
 
@@ -2270,12 +2269,19 @@ function initRoomsMode() {
   // Claim slot in Arena
   if (btnClaimOppSlot) {
     btnClaimOppSlot.addEventListener('click', () => {
-      const debaterName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер-соперник';
-      if (!activeRoomData.p1_name) {
-        activeRoomData.p1_name = debaterName;
-      } else if (!activeRoomData.p2_name) {
-        activeRoomData.p2_name = debaterName;
+      const responderName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер-соперник';
+      const creatorName = activeRoomData.creator_name || activeRoomData.p1_name || 'Дебатер 1';
+
+      // RANDOM CHAMBER LOTTERY (50/50 chance for who gets Government vs Opposition)
+      const creatorIsGov = Math.random() < 0.5;
+      if (creatorIsGov) {
+        activeRoomData.p1_name = creatorName;
+        activeRoomData.p2_name = responderName;
+      } else {
+        activeRoomData.p1_name = responderName;
+        activeRoomData.p2_name = creatorName;
       }
+
       activeRoomData.status = 'matched';
       activeRoomData.room_type = 'private'; // Becomes private once matched!
 
@@ -2290,7 +2296,9 @@ function initRoomsMode() {
 
       loadRoomIntoArena(activeRoomData);
       renderPublicRoomsGrid();
-      showToast(`Вы откликнулись! Комната стала закрытой. Ссылка сохранена в вашем Кабинете!`, 4000);
+
+      const userRole = activeRoomData.p1_name === responderName ? "Правительство" : "Оппозиция";
+      showToast(`Жеребьевка палат завершена! Ваша позиция: ${userRole}. Ссылка в Кабинете!`, 4500);
     });
   }
 
@@ -2460,11 +2468,16 @@ function respondToPublicRoom(roomCode) {
   if (!room) return;
 
   const responderName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер';
-  
-  if (!room.p1_name) {
-    room.p1_name = responderName;
-  } else if (!room.p2_name) {
+  const creatorName = room.creator_name || room.p1_name || 'Дебатер 1';
+
+  // RANDOM CHAMBER LOTTERY (50/50 chance for who gets Government vs Opposition)
+  const creatorIsGov = Math.random() < 0.5;
+  if (creatorIsGov) {
+    room.p1_name = creatorName;
     room.p2_name = responderName;
+  } else {
+    room.p1_name = responderName;
+    room.p2_name = creatorName;
   }
 
   // Once opponent responds, the room becomes closed/private and disappears from the public showcase
