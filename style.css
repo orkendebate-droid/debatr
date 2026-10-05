@@ -1005,12 +1005,263 @@ body {
 /* ==========================================================================
    1V1 FRIENDLY MATCH ROOMS
    ========================================================================== */
+/* ==========================================================================
+   1V1 FRIENDLY MATCH ROOMS (PUBLIC & PRIVATE ARCHITECTURE)
+   ========================================================================== */
 .rooms-container {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
+/* Nav Header between Lobby & Arena */
+.rooms-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rooms-nav-left {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rooms-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rooms-nav-tab:hover {
+  color: var(--text);
+  border-color: #9ca3af;
+}
+
+.rooms-nav-tab.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+.rooms-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.room-quick-join {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Lobby Showcase Banner */
+.lobby-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  border-left: 4px solid var(--primary);
+}
+
+.lobby-banner-info h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  color: var(--text);
+}
+
+.lobby-banner-info p {
+  font-size: 0.86rem;
+  max-width: 620px;
+  line-height: 1.45;
+}
+
+.lobby-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.lobby-filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.lobby-count-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.badge-lock-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fee2e2;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
+/* Public Rooms Grid */
+.public-rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.15rem;
+}
+
+.empty-rooms-banner {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #ffffff;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+}
+
+.empty-rooms-banner h4 {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.public-room-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.public-room-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.public-room-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.room-code-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: var(--bg-subtle);
+  color: var(--text);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.room-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.public-room-topic {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 3.8em;
+}
+
+.public-room-participants {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.participant-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.participant-line .gov-text {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.participant-line .opp-text {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.public-room-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.room-status-badge {
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.status-waiting {
+  color: #d97706;
+}
+
+.status-matched {
+  color: var(--green);
+}
+
+/* Arena Header & Meta Card */
 .room-meta-card {
   display: flex;
   flex-direction: column;
@@ -1032,6 +1283,7 @@ body {
   gap: 0.5rem;
   font-size: 0.82rem;
   color: var(--text-muted);
+  flex-wrap: wrap;
 }
 
 .room-id-badge strong {
@@ -1044,16 +1296,48 @@ body {
   font-size: 0.9rem;
 }
 
-.room-join-controls {
+.room-privacy-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+
+.public-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.private-badge {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.highlight-qr {
+  color: #4f46e5 !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.highlight-qr:hover {
+  text-decoration: underline;
+}
+
+.room-schedule-info {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-}
-
-.form-input-sm {
-  width: 140px;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
 }
 
 .room-topic-bar {
@@ -1063,6 +1347,50 @@ body {
   padding: 0.75rem 1rem;
   font-size: 0.88rem;
   line-height: 1.4;
+}
+
+/* Room Pairing Bar */
+.room-pairing-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pairing-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.pairing-role {
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.gov-text {
+  color: #1d4ed8;
+}
+
+.opp-text {
+  color: #b91c1c;
+}
+
+.pairing-vs {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: 0.2rem 0.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
 }
 
 .match-duel-grid {
@@ -1114,7 +1442,7 @@ body {
   background: transparent;
   padding: 0.2rem 0.4rem;
   border-radius: var(--radius);
-  width: 130px;
+  width: 140px;
 }
 
 .duel-player-input:hover, .duel-player-input:focus {
@@ -1173,6 +1501,257 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+/* Room Creation Modal styling */
+.room-create-modal {
+  max-width: 540px;
+}
+
+.room-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.room-type-option {
+  cursor: pointer;
+  display: block;
+}
+
+.room-type-option input {
+  display: none;
+}
+
+.room-type-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  transition: all 0.15s ease;
+  height: 100%;
+  background: var(--bg);
+}
+
+.room-type-option input:checked + .room-type-card {
+  border-color: var(--primary);
+  background: #f8fafc;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.type-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.public-icon {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.private-icon {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.type-text strong {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+  color: var(--text);
+}
+
+.type-text span {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.time-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.quick-time-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.label-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* QR Code Modal styling */
+.qr-card {
+  max-width: 380px;
+}
+
+.qr-canvas-wrapper {
+  background: #ffffff;
+  padding: 1rem;
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+}
+
+#qr-canvas {
+  width: 190px !important;
+  height: 190px !important;
+  display: block;
+  margin: 0 auto;
+}
+
+.qr-code-box {
+  margin-bottom: 1rem;
+}
+
+.qr-room-code {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.35rem;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+  margin-top: 0.15rem;
+}
+
+.share-link-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .match-duel-grid, .duel-feedback-grid, .form-row-2, .room-type-toggle {
+    grid-template-columns: 1fr;
+  }
+  .rooms-nav-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .rooms-nav-left {
+    flex-direction: column;
+  }
+}
+
+/* Active 1v1 Debate Room in Dashboard / Profile */
+.active-match-profile-card {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  border-left: 4px solid #4f46e5;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.08);
+}
+
+.active-match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.match-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #4338ca;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulseDotAnim 1.8s infinite;
+}
+
+@keyframes pulseDotAnim {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.active-match-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.active-match-main {
+  flex: 1;
+  min-width: 280px;
+}
+
+.active-match-main h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.45rem;
+  line-height: 1.4;
+}
+
+.active-match-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.match-time-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.match-code-tag strong {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--primary);
+}
+
+.match-participants-tag {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.active-match-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ==========================================================================

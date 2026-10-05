@@ -27,12 +27,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Таблица rooms (Комнаты дружеских матчей 1 на 1)
+-- 3. Таблица rooms (Комнаты матчей 1 на 1: открытые с расписанием и приватные по коду/ссылке/QR)
 CREATE TABLE IF NOT EXISTS public.rooms (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     code TEXT UNIQUE NOT NULL,
     topic TEXT NOT NULL,
-    status TEXT DEFAULT 'waiting', -- 'waiting', 'active', 'finished'
+    room_type TEXT DEFAULT 'public', -- 'public' (открытая витрина) или 'private' (по коду/ссылке/QR)
+    scheduled_time TEXT,             -- Например: "Сегодня, 19:30" или "Завтра, 16:00"
+    creator_name TEXT NOT NULL DEFAULT 'Дебатер',
+    p1_name TEXT DEFAULT 'Дебатер',
+    p2_name TEXT,
+    status TEXT DEFAULT 'waiting',   -- 'waiting', 'matched', 'active', 'finished'
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

@@ -616,6 +616,81 @@ function updateDashboardUI() {
     const avg = speechesHistory.length > 0 ? (speechesHistory.reduce((sum, item) => sum + item.score, 0) / speechesHistory.length) : 0;
     statAvgScore.textContent = avg.toFixed(1);
   }
+
+  // Update Active 1v1 Room in Profile Dashboard
+  updateDashboardActiveRoom();
+}
+
+function updateDashboardActiveRoom() {
+  const profileCard = document.getElementById('profile-active-room-card');
+  if (!profileCard) return;
+
+  // Retrieve user's matched room or last active room
+  const activeRoomRaw = localStorage.getItem('debatr_user_active_room');
+  let room = null;
+  if (activeRoomRaw) {
+    try {
+      room = JSON.parse(activeRoomRaw);
+    } catch (e) {}
+  }
+
+  // Fallback to activeRoomData if active
+  if (!room && typeof activeRoomData !== 'undefined' && activeRoomData) {
+    room = activeRoomData;
+  }
+
+  if (!room) {
+    profileCard.classList.add('hidden');
+    return;
+  }
+
+  profileCard.classList.remove('hidden');
+
+  const topicEl = document.getElementById('dash-room-topic');
+  const timeEl = document.getElementById('dash-room-time');
+  const codeEl = document.getElementById('dash-room-code');
+  const pairEl = document.getElementById('dash-room-pair');
+  const statusBadge = document.getElementById('dash-room-status-badge');
+  const linkBtn = document.getElementById('dash-room-link-btn');
+  const btnCopy = document.getElementById('btn-dash-copy-link');
+
+  if (topicEl) topicEl.textContent = room.topic;
+  if (timeEl) timeEl.textContent = room.scheduled_time || "Сегодня в 19:30";
+  if (codeEl) codeEl.textContent = room.code;
+
+  const p1 = room.p1_name || 'Спикер 1';
+  const p2 = room.p2_name || 'Ожидает оппонента';
+  if (pairEl) pairEl.textContent = `${p1} (Прав.) vs ${p2} (Опп.)`;
+
+  if (statusBadge) {
+    if (room.p1_name && room.p2_name) {
+      statusBadge.textContent = "Закрытая комната (Оппонент откликнулся)";
+      statusBadge.className = "room-privacy-badge private-badge";
+    } else {
+      statusBadge.textContent = room.room_type === 'public' ? "Открытая комната (Ожидание)" : "Закрытая комната (По ссылке)";
+      statusBadge.className = room.room_type === 'public' ? "room-privacy-badge public-badge" : "room-privacy-badge private-badge";
+    }
+  }
+
+  const roomUrl = `rooms.html?room=${room.code}`;
+  if (linkBtn) {
+    linkBtn.href = roomUrl;
+  }
+
+  if (btnCopy) {
+    btnCopy.onclick = () => {
+      const fullUrl = `${window.location.origin}${window.location.pathname.replace('dashboard.html', 'rooms.html')}?room=${room.code}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          showToast(`Ссылка на матч ${room.code} скопирована!`);
+        }).catch(() => {
+          showToast(`Ссылка на матч ${room.code} скопирована!`);
+        });
+      } else {
+        showToast(`Ссылка на матч ${room.code} скопирована!`);
+      }
+    };
+  }
 }
 
 function getExerciseTypeName(type) {
@@ -1836,7 +1911,7 @@ function resetBattleRound() {
 }
 
 // ==========================================
-// 13. 1V1 FRIENDLY MATCH ROOMS
+// 13. 1V1 FRIENDLY MATCH ROOMS (PUBLIC & PRIVATE ARCHITECTURE)
 // ==========================================
 
 const SAMPLE_ROOM_SPEECHES = {
@@ -1844,52 +1919,361 @@ const SAMPLE_ROOM_SPEECHES = {
   p2: "Палата Оппозиции решительно против отмены стандартизированных тестов. Проектная оценка абсолютно субъективна: в ней невозможно исключить коррупционный фактор, помощь родителей или наем репетиторов для оформления портфолио. Единый тест — это единственный объективный социальный лифт для талантливых ребят из сельских школ и регионов, обеспечивающий равенство возможностей при поступлении."
 };
 
+// Initial mock public rooms for immediate demonstration
+const INITIAL_DEMO_ROOMS = [
+  {
+    code: "ROOM-721",
+    topic: "ЭП введет безусловный базовый доход, финансируемый налогом на роботизацию и автоматизацию труда.",
+    room_type: "public",
+    scheduled_time: "Сегодня в 19:30",
+    creator_name: "Арман С.",
+    p1_name: "Арман С.",
+    p2_name: null,
+    status: "waiting"
+  },
+  {
+    code: "ROOM-354",
+    topic: "ЭП считает, что развитие автономных систем ИИ должно жестко лицензироваться международным регулятором.",
+    room_type: "public",
+    scheduled_time: "Сегодня в 21:00",
+    creator_name: "Дамир К.",
+    p1_name: "Дамир К.",
+    p2_name: null,
+    status: "waiting"
+  },
+  {
+    code: "ROOM-912",
+    topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
+    room_type: "public",
+    scheduled_time: "Завтра в 17:00",
+    creator_name: "Айгерим М.",
+    p1_name: "Айгерим М.",
+    p2_name: null,
+    status: "waiting"
+  }
+];
+
+let activeRoomData = {
+  code: "ROOM-842",
+  topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
+  room_type: "public",
+  scheduled_time: "Сегодня в 19:00",
+  creator_name: "Ихлас М.",
+  p1_name: "Ихлас М.",
+  p2_name: null,
+  status: "waiting"
+};
+
+function getStoredPublicRooms() {
+  try {
+    const raw = localStorage.getItem('debatr_rooms_list');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.warn("Error parsing debatr_rooms_list:", e);
+  }
+  return [...INITIAL_DEMO_ROOMS];
+}
+
+function saveStoredPublicRooms(rooms) {
+  try {
+    localStorage.setItem('debatr_rooms_list', JSON.stringify(rooms));
+  } catch (e) {
+    console.warn("Error saving debatr_rooms_list:", e);
+  }
+}
+
 function initRoomsMode() {
-  const btnCreateRoom = document.getElementById('btn-create-room');
+  // Navigation tabs between Lobby & Arena
+  const tabOpenLobby = document.getElementById('tab-open-lobby');
+  const tabOpenArena = document.getElementById('tab-open-arena');
+  const sectionLobby = document.getElementById('section-rooms-lobby');
+  const sectionArena = document.getElementById('section-rooms-arena');
+
+  function showSection(name) {
+    if (name === 'lobby') {
+      if (tabOpenLobby) tabOpenLobby.classList.add('active');
+      if (tabOpenArena) tabOpenArena.classList.remove('active');
+      if (sectionLobby) sectionLobby.classList.remove('hidden');
+      if (sectionArena) sectionArena.classList.add('hidden');
+    } else {
+      if (tabOpenArena) tabOpenArena.classList.add('active');
+      if (tabOpenLobby) tabOpenLobby.classList.remove('active');
+      if (sectionArena) sectionArena.classList.remove('hidden');
+      if (sectionLobby) sectionLobby.classList.add('hidden');
+    }
+  }
+
+  if (tabOpenLobby) tabOpenLobby.addEventListener('click', () => showSection('lobby'));
+  if (tabOpenArena) tabOpenArena.addEventListener('click', () => showSection('arena'));
+
+  const btnBackToLobby = document.getElementById('btn-back-to-lobby');
+  if (btnBackToLobby) {
+    btnBackToLobby.addEventListener('click', () => {
+      showSection('lobby');
+      renderPublicRoomsGrid();
+    });
+  }
+
+  // Create Room Modal controls
+  const btnOpenCreateModal = document.getElementById('btn-open-create-room-modal');
+  const btnBannerCreate = document.getElementById('btn-banner-create');
+  const createModal = document.getElementById('create-room-modal');
+  const btnCloseCreateModal = document.getElementById('btn-close-create-modal');
+  const btnCancelCreateModal = document.getElementById('btn-cancel-create-modal');
+  const btnSubmitCreateRoom = document.getElementById('btn-submit-create-room');
+  const btnModalRandomTopic = document.getElementById('btn-modal-random-topic');
+  const inputRoomTopic = document.getElementById('input-room-topic');
+  const inputScheduledTime = document.getElementById('input-scheduled-time');
+  const inputCreatorName = document.getElementById('input-creator-name');
+  const selectCreatorRole = document.getElementById('select-creator-role');
+  const timeQuickBtns = document.querySelectorAll('.time-quick-btn');
+
+  // QR Modal controls
+  const qrModal = document.getElementById('qr-modal');
+  const btnCloseQrModal = document.getElementById('btn-close-qr-modal');
+  const btnShowQr = document.getElementById('btn-show-qr');
+  const btnCopyRoomLink = document.getElementById('btn-copy-room-link');
+  const btnModalCopyLink = document.getElementById('btn-modal-copy-link');
+
+  // Quick join by code
   const btnJoinRoom = document.getElementById('btn-join-room');
+  const inputRoomCode = document.getElementById('input-room-code');
   const btnCopyCode = document.getElementById('btn-copy-room-code');
+  const btnClaimOppSlot = document.getElementById('btn-claim-opp-slot');
+  const btnRefreshRooms = document.getElementById('btn-refresh-rooms');
+
+  // Speech buttons
   const btnJudgeDuel = document.getElementById('btn-judge-duel');
   const btnLoadP1 = document.getElementById('btn-load-p1-sample');
   const btnLoadP2 = document.getElementById('btn-load-p2-sample');
 
-  if (btnCreateRoom) {
-    btnCreateRoom.addEventListener('click', () => {
-      const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
-      document.getElementById('current-room-code').textContent = code;
-      showToast(`Комната: ${code}`);
+  function openCreateModal() {
+    if (!createModal) return;
+    if (inputRoomTopic && !inputRoomTopic.value) {
+      inputRoomTopic.value = DEBATE_TOPICS[Math.floor(Math.random() * DEBATE_TOPICS.length)];
+    }
+    if (inputCreatorName && currentUser && currentUser.name && currentUser.name !== 'Гость') {
+      inputCreatorName.value = currentUser.name;
+    }
+    createModal.classList.remove('hidden');
+  }
+
+  function closeCreateModal() {
+    if (createModal) createModal.classList.add('hidden');
+  }
+
+  if (btnOpenCreateModal) btnOpenCreateModal.addEventListener('click', openCreateModal);
+  if (btnBannerCreate) btnBannerCreate.addEventListener('click', openCreateModal);
+  if (btnCloseCreateModal) btnCloseCreateModal.addEventListener('click', closeCreateModal);
+  if (btnCancelCreateModal) btnCancelCreateModal.addEventListener('click', closeCreateModal);
+
+  if (createModal) {
+    createModal.addEventListener('click', (e) => {
+      if (e.target === createModal) closeCreateModal();
     });
   }
 
-  if (btnJoinRoom) {
-    btnJoinRoom.addEventListener('click', () => {
-      const input = document.getElementById('input-room-code');
-      const val = input ? input.value.trim().toUpperCase() : '';
-      if (!val) {
-        showToast("Введите код");
-        return;
+  timeQuickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (inputScheduledTime) {
+        inputScheduledTime.value = btn.getAttribute('data-time') || '';
       }
-      document.getElementById('current-room-code').textContent = val;
-      input.value = '';
-      showToast(`Комната: ${val}`);
+    });
+  });
+
+  if (btnModalRandomTopic && inputRoomTopic) {
+    btnModalRandomTopic.addEventListener('click', () => {
+      const idx = Math.floor(Math.random() * DEBATE_TOPICS.length);
+      inputRoomTopic.value = DEBATE_TOPICS[idx];
+      showToast("Тема обновлена!");
+    });
+  }
+
+  // Handle Create Room submit
+  if (btnSubmitCreateRoom) {
+    btnSubmitCreateRoom.addEventListener('click', async () => {
+      const selectedType = document.querySelector('input[name="modal-room-type"]:checked')?.value || 'public';
+      const timeVal = (inputScheduledTime?.value || '').trim() || 'Сегодня в 19:00';
+      const topicVal = (inputRoomTopic?.value || '').trim() || DEBATE_TOPICS[0];
+      const creatorName = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
+      const role = selectCreatorRole?.value || 'p1';
+
+      const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
+
+      const newRoom = {
+        code: code,
+        topic: topicVal,
+        room_type: selectedType,
+        scheduled_time: timeVal,
+        creator_name: creatorName,
+        p1_name: role === 'p1' ? creatorName : null,
+        p2_name: role === 'p2' ? creatorName : null,
+        status: 'waiting'
+      };
+
+      // Save to Supabase if configured
+      const supabaseUrl = localStorage.getItem('debatr_supabase_url');
+      const supabaseKey = localStorage.getItem('debatr_supabase_key');
+      if (supabaseUrl && supabaseKey && window.supabase) {
+        try {
+          const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+          await client.from('rooms').insert([{
+            code: newRoom.code,
+            topic: newRoom.topic,
+            room_type: newRoom.room_type,
+            scheduled_time: newRoom.scheduled_time,
+            creator_name: newRoom.creator_name,
+            p1_name: newRoom.p1_name,
+            p2_name: newRoom.p2_name,
+            status: newRoom.status
+          }]);
+        } catch (e) {
+          console.warn("Supabase room creation fallback to local:", e);
+        }
+      }
+
+      // Add to local storage if public
+      if (selectedType === 'public') {
+        const rooms = getStoredPublicRooms();
+        rooms.unshift(newRoom);
+        saveStoredPublicRooms(rooms);
+      }
+
+      activeRoomData = newRoom;
+      closeCreateModal();
+      loadRoomIntoArena(activeRoomData);
+      showSection('arena');
+
+      if (selectedType === 'private') {
+        showToast(`Создана закрытая комната ${code}! Отправьте ссылку или QR оппоненту.`);
+        setTimeout(() => openQrModal(code), 300);
+      } else {
+        showToast(`Открытая комната ${code} опубликована на ${timeVal}!`);
+      }
+    });
+  }
+
+  // QR Modal interactions
+  function openQrModal(code) {
+    if (!qrModal) return;
+    const roomCode = code || activeRoomData.code;
+    const qrDisplay = document.getElementById('qr-room-code-display');
+    if (qrDisplay) qrDisplay.textContent = roomCode;
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+    const shareInput = document.getElementById('input-share-link');
+    if (shareInput) shareInput.value = shareUrl;
+
+    const canvas = document.getElementById('qr-canvas');
+    if (canvas && window.QRCode) {
+      window.QRCode.toCanvas(canvas, shareUrl, {
+        width: 190,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      }, (err) => {
+        if (err) console.error("QR Code generation error:", err);
+      });
+    }
+
+    qrModal.classList.remove('hidden');
+  }
+
+  function closeQrModal() {
+    if (qrModal) qrModal.classList.add('hidden');
+  }
+
+  if (btnShowQr) btnShowQr.addEventListener('click', () => openQrModal(activeRoomData.code));
+  if (btnCloseQrModal) btnCloseQrModal.addEventListener('click', closeQrModal);
+  if (qrModal) {
+    qrModal.addEventListener('click', (e) => {
+      if (e.target === qrModal) closeQrModal();
+    });
+  }
+
+  function copyTextToClipboard(text, successMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => showToast(successMsg)).catch(() => showToast(successMsg));
+    } else {
+      showToast(successMsg);
+    }
+  }
+
+  if (btnCopyRoomLink) {
+    btnCopyRoomLink.addEventListener('click', () => {
+      const shareUrl = `${window.location.origin}${window.location.pathname}?room=${activeRoomData.code}`;
+      copyTextToClipboard(shareUrl, `Ссылка на ${activeRoomData.code} скопирована!`);
+    });
+  }
+
+  if (btnModalCopyLink) {
+    btnModalCopyLink.addEventListener('click', () => {
+      const shareUrl = `${window.location.origin}${window.location.pathname}?room=${activeRoomData.code}`;
+      copyTextToClipboard(shareUrl, `Ссылка на комнату скопирована!`);
     });
   }
 
   if (btnCopyCode) {
     btnCopyCode.addEventListener('click', () => {
-      const code = document.getElementById('current-room-code').textContent;
-      navigator.clipboard.writeText(code).then(() => {
-        showToast(`Код: ${code}`);
-      }).catch(() => {
-        showToast(`Код: ${code}`);
-      });
+      copyTextToClipboard(activeRoomData.code, `Код ${activeRoomData.code} скопирован!`);
     });
   }
 
+  // Join Room by Code
+  if (btnJoinRoom) {
+    btnJoinRoom.addEventListener('click', () => {
+      const val = (inputRoomCode?.value || '').trim().toUpperCase();
+      if (!val) {
+        showToast("Введите код комнаты!");
+        return;
+      }
+      joinRoomByCode(val);
+      if (inputRoomCode) inputRoomCode.value = '';
+    });
+  }
+
+  // Claim slot in Arena
+  if (btnClaimOppSlot) {
+    btnClaimOppSlot.addEventListener('click', () => {
+      const debaterName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер-соперник';
+      if (!activeRoomData.p1_name) {
+        activeRoomData.p1_name = debaterName;
+      } else if (!activeRoomData.p2_name) {
+        activeRoomData.p2_name = debaterName;
+      }
+      activeRoomData.status = 'matched';
+      activeRoomData.room_type = 'private'; // Becomes private once matched!
+
+      // Remove from public rooms list so other people can't enter
+      let rooms = getStoredPublicRooms();
+      rooms = rooms.filter(r => r.code !== activeRoomData.code);
+      saveStoredPublicRooms(rooms);
+
+      // Save to user profile & sync with cloud
+      saveUserActiveMatch(activeRoomData);
+      syncRoomUpdateToSupabase(activeRoomData);
+
+      loadRoomIntoArena(activeRoomData);
+      renderPublicRoomsGrid();
+      showToast(`Вы откликнулись! Комната стала закрытой. Ссылка сохранена в вашем Кабинете!`, 4000);
+    });
+  }
+
+  if (btnRefreshRooms) {
+    btnRefreshRooms.addEventListener('click', () => {
+      renderPublicRoomsGrid();
+      showToast("Список открытых игр обновлен");
+    });
+  }
+
+  // Sample buttons
   if (btnLoadP1) {
     btnLoadP1.addEventListener('click', () => {
       const p1Text = document.getElementById('p1-speech');
       if (p1Text) p1Text.value = SAMPLE_ROOM_SPEECHES.p1;
-      showToast("Пример загружен");
+      showToast("Пример речи Правительства загружен");
     });
   }
 
@@ -1897,13 +2281,252 @@ function initRoomsMode() {
     btnLoadP2.addEventListener('click', () => {
       const p2Text = document.getElementById('p2-speech');
       if (p2Text) p2Text.value = SAMPLE_ROOM_SPEECHES.p2;
-      showToast("Пример загружен");
+      showToast("Пример речи Оппозиции загружен");
     });
   }
 
   if (btnJudgeDuel) {
     btnJudgeDuel.addEventListener('click', handleJudgeDuel);
   }
+
+  // Check URL params for direct link: ?room=ROOM-123
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomParam = urlParams.get('room');
+  if (roomParam) {
+    joinRoomByCode(roomParam.toUpperCase());
+  } else {
+    renderPublicRoomsGrid();
+    loadRoomIntoArena(activeRoomData);
+  }
+}
+
+function loadRoomIntoArena(room) {
+  const codeEl = document.getElementById('current-room-code');
+  const typeBadge = document.getElementById('current-room-type-badge');
+  const timeEl = document.getElementById('current-room-time');
+  const topicEl = document.getElementById('room-topic-display');
+  const p1Tag = document.getElementById('p1-display-tag');
+  const p2Tag = document.getElementById('p2-display-tag');
+  const p1Input = document.getElementById('p1-name');
+  const p2Input = document.getElementById('p2-name');
+  const btnClaim = document.getElementById('btn-claim-opp-slot');
+
+  if (codeEl) codeEl.textContent = room.code;
+  if (topicEl) topicEl.textContent = room.topic;
+
+  if (typeBadge) {
+    if (room.room_type === 'private') {
+      typeBadge.textContent = "Закрытая (QR / Ссылка)";
+      typeBadge.className = "room-privacy-badge private-badge";
+    } else {
+      typeBadge.textContent = "Открытая (Витрина)";
+      typeBadge.className = "room-privacy-badge public-badge";
+    }
+  }
+
+  if (timeEl) {
+    timeEl.textContent = room.scheduled_time || "Сразу после сбора";
+  }
+
+  if (p1Tag) {
+    p1Tag.textContent = room.p1_name ? room.p1_name : "Ожидает назначения";
+  }
+  if (p1Input && room.p1_name) {
+    p1Input.value = room.p1_name;
+  }
+
+  if (p2Tag) {
+    p2Tag.textContent = room.p2_name ? room.p2_name : "Ожидание соперника...";
+  }
+  if (p2Input && room.p2_name) {
+    p2Input.value = room.p2_name;
+  }
+
+  if (btnClaim) {
+    if (room.p1_name && room.p2_name) {
+      btnClaim.classList.add('hidden');
+    } else {
+      btnClaim.classList.remove('hidden');
+    }
+  }
+}
+
+function joinRoomByCode(code) {
+  const rooms = getStoredPublicRooms();
+  let found = rooms.find(r => r.code === code);
+
+  if (!found) {
+    // If closed or unlisted room, create session entry for this code
+    found = {
+      code: code,
+      topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
+      room_type: code.startsWith('ROOM-P') ? "private" : "private",
+      scheduled_time: "Сразу после подключения",
+      creator_name: "Пригласивший дебатер",
+      p1_name: "Спикер 1",
+      p2_name: currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : null,
+      status: "waiting"
+    };
+  }
+
+  activeRoomData = found;
+  loadRoomIntoArena(activeRoomData);
+
+  // Switch to Arena tab
+  const tabArena = document.getElementById('tab-open-arena');
+  const tabLobby = document.getElementById('tab-open-lobby');
+  const sectionLobby = document.getElementById('section-rooms-lobby');
+  const sectionArena = document.getElementById('section-rooms-arena');
+
+  if (tabArena) tabArena.classList.add('active');
+  if (tabLobby) tabLobby.classList.remove('active');
+  if (sectionArena) sectionArena.classList.remove('hidden');
+  if (sectionLobby) sectionLobby.classList.add('hidden');
+
+  showToast(`Вход в комнату ${code} выполнен!`);
+}
+
+function respondToPublicRoom(roomCode) {
+  let rooms = getStoredPublicRooms();
+  const room = rooms.find(r => r.code === roomCode);
+  if (!room) return;
+
+  const responderName = currentUser && currentUser.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер';
+  
+  if (!room.p1_name) {
+    room.p1_name = responderName;
+  } else if (!room.p2_name) {
+    room.p2_name = responderName;
+  }
+
+  // Once opponent responds, the room becomes closed/private and disappears from the public showcase
+  room.room_type = 'private';
+  room.status = 'matched';
+
+  // Filter out this newly closed room from the public showcase list
+  rooms = rooms.filter(r => r.code !== roomCode);
+  saveStoredPublicRooms(rooms);
+
+  // Save as active room in user profile
+  saveUserActiveMatch(room);
+
+  activeRoomData = room;
+  loadRoomIntoArena(activeRoomData);
+
+  // Sync to Supabase if connected
+  syncRoomUpdateToSupabase(room);
+
+  // Open Arena view
+  const tabArena = document.getElementById('tab-open-arena');
+  const tabLobby = document.getElementById('tab-open-lobby');
+  const sectionLobby = document.getElementById('section-rooms-lobby');
+  const sectionArena = document.getElementById('section-rooms-arena');
+
+  if (tabArena) tabArena.classList.add('active');
+  if (tabLobby) tabLobby.classList.remove('active');
+  if (sectionArena) sectionArena.classList.remove('hidden');
+  if (sectionLobby) sectionLobby.classList.add('hidden');
+
+  renderPublicRoomsGrid();
+  showToast(`Вы приняли вызов! Комната ${room.code} теперь закрыта. Ссылка сохранена в вашем Кабинете!`, 4000);
+}
+
+function saveUserActiveMatch(room) {
+  try {
+    localStorage.setItem('debatr_user_active_room', JSON.stringify(room));
+    updateDashboardActiveRoom();
+  } catch (e) {
+    console.warn("Error saving active room to storage:", e);
+  }
+}
+
+async function syncRoomUpdateToSupabase(room) {
+  const supabaseUrl = localStorage.getItem('debatr_supabase_url');
+  const supabaseKey = localStorage.getItem('debatr_supabase_key');
+  if (supabaseUrl && supabaseKey && window.supabase) {
+    try {
+      const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+      await client.from('rooms').update({
+        p1_name: room.p1_name,
+        p2_name: room.p2_name,
+        room_type: 'private',
+        status: 'matched'
+      }).eq('code', room.code);
+    } catch (e) {
+      console.warn("Supabase room update error:", e);
+    }
+  }
+}
+
+function renderPublicRoomsGrid() {
+  const grid = document.getElementById('public-rooms-grid');
+  const countLabel = document.getElementById('lobby-count-label');
+  if (!grid) return;
+
+  const rooms = getStoredPublicRooms();
+  if (countLabel) {
+    countLabel.textContent = `Доступно открытых игр: ${rooms.length}`;
+  }
+
+  if (rooms.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-rooms-banner">
+        <h4>Пока нет открытых комнат</h4>
+        <p>Создайте первую открытую игру с удобным временем дебатов, чтобы другие спикеры могли откликнуться!</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = rooms.map(room => {
+    const isFull = room.p1_name && room.p2_name;
+    const statusText = isFull ? 'Оппонент найден' : 'Ожидает соперника';
+    const statusClass = isFull ? 'status-matched' : 'status-waiting';
+    const buttonText = isFull ? 'Войти зрителем/участником' : 'Откликнуться на игру';
+    const buttonClass = isFull ? 'btn-secondary btn-sm' : 'btn-primary btn-sm';
+
+    return `
+      <div class="public-room-card" data-code="${room.code}">
+        <div class="public-room-card-header">
+          <span class="room-code-tag">${escapeHtml(room.code)}</span>
+          <span class="room-time-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            ${escapeHtml(room.scheduled_time || 'Сегодня')}
+          </span>
+        </div>
+
+        <div class="public-room-topic" title="${escapeHtml(room.topic)}">
+          ${escapeHtml(room.topic)}
+        </div>
+
+        <div class="public-room-participants">
+          <div class="participant-line">
+            <span class="gov-text">Правительство:</span>
+            <span>${escapeHtml(room.p1_name || 'Свободно')}</span>
+          </div>
+          <div class="participant-line">
+            <span class="opp-text">Оппозиция:</span>
+            <span>${escapeHtml(room.p2_name || 'Ожидает отклика')}</span>
+          </div>
+        </div>
+
+        <div class="public-room-card-footer">
+          <span class="room-status-badge ${statusClass}">${statusText}</span>
+          <button class="${buttonClass} btn-respond-room" data-code="${room.code}">
+            ${buttonText}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach event handlers for "Respond / Join"
+  grid.querySelectorAll('.btn-respond-room').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const code = e.currentTarget.getAttribute('data-code');
+      respondToPublicRoom(code);
+    });
+  });
 }
 
 async function handleJudgeDuel() {

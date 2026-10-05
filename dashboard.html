@@ -40,6 +40,42 @@
 
   <main class="main-container">
     
+    <!-- Active Match Room in User Profile -->
+    <div id="profile-active-room-card" class="glass-card active-match-profile-card hidden">
+      <div class="active-match-header">
+        <div class="match-pulse-badge">
+          <span class="pulse-dot"></span>
+          <span>Назначенный матч 1 на 1</span>
+        </div>
+        <span class="room-privacy-badge private-badge" id="dash-room-status-badge">Закрытая комната (Оппонент найден)</span>
+      </div>
+
+      <div class="active-match-body">
+        <div class="active-match-main">
+          <h4 id="dash-room-topic">Тема дебатов загружается...</h4>
+          <div class="active-match-meta">
+            <span class="match-time-tag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <strong id="dash-room-time">Сегодня в 19:30</strong>
+            </span>
+            <span class="match-code-tag">Код: <strong id="dash-room-code">ROOM-842</strong></span>
+            <span class="match-participants-tag" id="dash-room-pair">Ихлас М. vs Оппонент</span>
+          </div>
+        </div>
+
+        <div class="active-match-actions">
+          <a href="rooms.html" id="dash-room-link-btn" class="btn-primary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Войти в комнату матча</span>
+          </a>
+          <button type="button" class="btn-secondary btn-sm" id="btn-dash-copy-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Скопировать ссылку</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="stats-row">
       <div class="stat-card">
         <span class="stat-num" id="stat-total-speeches">0</span>
