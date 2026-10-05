@@ -2365,14 +2365,14 @@ function loadRoomIntoArena(room) {
   if (room.is_revealed) {
     if (topicEl) topicEl.textContent = room.topic;
     if (resBadge) {
-      resBadge.textContent = "🔓 Резолюция открыта (Раунд подготовки)";
+      resBadge.textContent = "Резолюция открыта (15 мин)";
       resBadge.className = "resolution-unlocked-badge";
     }
     if (btnForceReveal) btnForceReveal.classList.add('hidden');
   } else {
-    if (topicEl) topicEl.textContent = `Сфера: «${categoryName}». Точная резолюция дебатов генерируется и открывается за 15 минут до раунда!`;
+    if (topicEl) topicEl.textContent = `Сфера: ${categoryName}. Резолюция генерируется за 15 минут до раунда.`;
     if (resBadge) {
-      resBadge.textContent = "🔒 Скрыта до Prep Time (за 15 мин)";
+      resBadge.textContent = "Скрыта до Prep Time";
       resBadge.className = "resolution-lock-badge";
     }
     if (btnForceReveal) {
@@ -2381,11 +2381,11 @@ function loadRoomIntoArena(room) {
         room.is_revealed = true;
         if (topicEl) topicEl.textContent = room.topic;
         if (resBadge) {
-          resBadge.textContent = "🔓 Резолюция открыта (15 мин на подготовку)";
+          resBadge.textContent = "Резолюция открыта";
           resBadge.className = "resolution-unlocked-badge";
         }
         btnForceReveal.classList.add('hidden');
-        showToast("Резолюция открыта! 15 минут на подготовку речей.");
+        showToast("Резолюция открыта");
       };
     }
   }
