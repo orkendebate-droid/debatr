@@ -736,20 +736,28 @@ function updateDashboardActiveRoom() {
     linkBtn.href = roomUrl;
   }
 
-  if (btnCopy) {
-    btnCopy.onclick = () => {
-      const fullUrl = `${window.location.origin}${window.location.pathname.replace('dashboard.html', 'rooms.html')}?room=${room.code}`;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(fullUrl).then(() => {
-          showToast(`Ссылка на матч ${room.code} скопирована!`);
-        }).catch(() => {
-          showToast(`Ссылка на матч ${room.code} скопирована!`);
-        });
-      } else {
-        showToast(`Ссылка на матч ${room.code} скопирована!`);
-      }
-    };
+  const directLinkInput = document.getElementById('dash-room-direct-link-input');
+  const btnQuickCopy = document.getElementById('btn-dash-quick-copy');
+  const fullUrl = `${window.location.origin}${window.location.pathname.replace('dashboard.html', 'rooms.html')}?room=${room.code}`;
+
+  if (directLinkInput) {
+    directLinkInput.value = fullUrl;
   }
+
+  function copyDashLink() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        showToast(`Ссылка на комнату ${room.code} скопирована!`);
+      }).catch(() => {
+        showToast(`Ссылка на комнату ${room.code} скопирована!`);
+      });
+    } else {
+      showToast(`Ссылка на комнату ${room.code} скопирована!`);
+    }
+  }
+
+  if (btnCopy) btnCopy.onclick = copyDashLink;
+  if (btnQuickCopy) btnQuickCopy.onclick = copyDashLink;
 }
 
 function getExerciseTypeName(type) {
@@ -2218,6 +2226,9 @@ function initRoomsMode() {
     const rooms = getStoredPublicRooms();
     rooms.unshift(newRoom);
     saveStoredPublicRooms(rooms);
+
+    // Save as active room in user profile (Dashboard) immediately upon creation
+    saveUserActiveMatch(newRoom);
 
     activeRoomData = newRoom;
     closeCreateModal();
