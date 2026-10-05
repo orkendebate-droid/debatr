@@ -7,6 +7,100 @@
 // 1. DATA & DEBATE TOPICS
 // ==========================================
 
+const DEFAULT_AI_MODEL = 'gpt-6-luna';
+const DEFAULT_REASONING_EFFORT = 'medium';
+
+function getDebatrApiKey() {
+  return localStorage.getItem('debatr_ai_key') || '';
+}
+
+function getDebatrAiModel() {
+  return localStorage.getItem('debatr_ai_model') || DEFAULT_AI_MODEL;
+}
+
+/**
+ * Universal Debate AI caller using GPT-6 Luna engine
+ * (routed through reasoning model with medium effort and robust fallbacks)
+ */
+async function callDebateAI({ messages, isJson = false, maxTokens = 1200 }) {
+  const apiKey = getDebatrApiKey();
+  if (!apiKey) throw new Error("No API key available");
+
+  const targetModel = getDebatrAiModel();
+
+  // 1. First attempt: target model or o3-mini with reasoning_effort = medium
+  const primaryModels = targetModel === 'gpt-6-luna' ? ['gpt-6-luna', 'o3-mini'] : [targetModel, 'o3-mini'];
+
+  for (const m of primaryModels) {
+    try {
+      const isO3 = m === 'o3-mini';
+      const payload = {
+        model: m,
+        messages: messages.map(msg => ({
+          role: (isO3 && msg.role === 'system') ? 'developer' : msg.role,
+          content: msg.content
+        }))
+      };
+
+      if (isO3) {
+        payload.reasoning_effort = "medium";
+        payload.max_completion_tokens = maxTokens;
+      } else {
+        payload.max_tokens = maxTokens;
+        if (!m.startsWith('o')) {
+          payload.temperature = isJson ? 0.3 : 0.75;
+        }
+      }
+
+      if (isJson) {
+        payload.response_format = { type: "json_object" };
+      }
+
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          return data.choices[0].message.content.trim();
+        }
+      }
+    } catch (err) {
+      console.warn(`Model ${m} attempt failed, trying next candidate:`, err);
+    }
+  }
+
+  // 2. Fallback: gpt-4o-mini
+  const fallbackPayload = {
+    model: "gpt-4o-mini",
+    messages: messages,
+    temperature: isJson ? 0.3 : 0.75,
+    max_tokens: maxTokens
+  };
+  if (isJson) {
+    fallbackPayload.response_format = { type: "json_object" };
+  }
+
+  const fbRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(fallbackPayload)
+  });
+
+  if (!fbRes.ok) throw new Error(`AI API call failed: ${fbRes.status}`);
+  const fbData = await fbRes.json();
+  return fbData.choices[0].message.content.trim();
+}
+
 const DEBATE_TOPICS = [
   "ЭП считает, что развитие автономных систем искусственного интеллекта должно жестко лицензироваться международным регулятором.",
   "ЭП запретит разработку и внедрение систем социального кредита и скоринга граждан.",
@@ -87,41 +181,49 @@ function getRandomResolutionForCategory(categoryKey) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-async function generateResolutionWithAI(categoryKey) {
+async function generateResolutionWithAI(categoryKey, level = 'intermediate') {
   const normKey = categoryKey === 'tech' ? 'ai_tech' : (categoryKey === 'economics' ? 'economy' : categoryKey);
   const catName = getCategoryName(normKey);
-  const apiKey = localStorage.getItem('debatr_ai_key') || '';
+  const apiKey = getDebatrApiKey();
 
   if (!apiKey) {
     return getRandomResolutionForCategory(normKey);
   }
 
-  const prompt = `Ты главный судья и главный формулировщик тем турниров по парламентским дебатам (форматы WUDC, BP, Линкольн-Дуглас).
-Сформулируй ровно ОДНУ острую, сбалансированную и актуальную резолюцию для дебатов по теме: "${catName}".
-Формат резолюции строго: "ЭП [глагол действия или оценка] ...", например: "ЭП запретит развитие автономных боевых систем ИИ." или "ЭП считает, что...".
-Не пиши вводных слов, пояснений или кавычек. Выведи строго только саму резолюцию.`;
+  const levelDescriptions = {
+    beginner: 'Начальный уровень (ясная, жизненная тема для новичков и школьников, понятный конфликт без узкоспециализированных терминов)',
+    novice: 'Начальный уровень (наглядная тема с понятными аргументами)',
+    intermediate: 'Средний уровень (соревновательная дебатная тема с балансом прав, институциональных норм и экономических компромиссов)',
+    pragmatist: 'Средний уровень (практическая осуществимость и баланс интересов)',
+    advanced: 'Высокий / Турнирный уровень (глубокая ценностная, технологическая или геополитическая дилемма формата WUDC / BP)',
+    champion: 'Высокий / Турнирный уровень (сложная дилемма для опытных дебатеров)',
+    socrates: 'Мастерский уровень (фундаментальный философский конфликт)'
+  };
+
+  const levelText = levelDescriptions[level] || levelDescriptions.intermediate;
+
+  const prompt = `Ты главный формулировщик тем и коллегия судей турниров по дебатам (форматы WUDC, BP, Линкольн-Дуглас).
+Сформулируй ровно ОДНУ новую, острую, сбалансированную и глубокую резолюцию дебатов.
+
+ПАРАМЕТРЫ РАУНДА:
+- Выбранная сфера: "${catName}"
+- Уровень сложности комнаты/дебатеров: ${levelText}
+
+ТРЕБОВАНИЯ:
+1. Резолюция ОБЯЗАТЕЛЬНО должна начинаться со слова "ЭП" (Эта Палата), например: "ЭП запретит...", "ЭП обяжет...", "ЭП считает, что...", "ЭП предоставит...".
+2. Тема должна идеально соответствовать уровню сложности (${levelText}) и иметь сильные равнозначные позиции как за Правительство, так и за Оппозицию.
+3. Не пиши вводных слов, номеров, вариантов или кавычек. Выведи строго только саму резолюцию.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.85,
-        max_tokens: 80
-      })
+    const raw = await callDebateAI({
+      messages: [
+        { role: "developer", content: "You are an international chief debate motions adjudicator. Return strictly a single debate motion in Russian starting with 'ЭП'." },
+        { role: "user", content: prompt }
+      ],
+      maxTokens: 140
     });
 
-    if (!response.ok) {
-      return getRandomResolutionForCategory(normKey);
-    }
-    const data = await response.json();
-    let text = (data.choices[0]?.message?.content || "").trim();
-    text = text.replace(/^["'«]+|["'»]+$/g, '').trim();
+    let text = (raw || "").trim().replace(/^["'«]+|["'»]+$/g, '').trim();
     if (!text.startsWith("ЭП")) {
       text = "ЭП считает, что " + text.charAt(0).toLowerCase() + text.slice(1);
     }
@@ -391,11 +493,10 @@ function initAnalyzeButton() {
       if (feedbackResults) feedbackResults.classList.add('hidden');
       if (feedbackLoading) feedbackLoading.classList.remove('hidden');
 
-      const apiKey = localStorage.getItem('debatr_ai_key');
-      const aiMode = localStorage.getItem('debatr_ai_mode') || 'luna-sim';
+      const apiKey = getDebatrApiKey();
       const topicText = topicDisplay ? topicDisplay.textContent : DEBATE_TOPICS[0];
 
-      if (aiMode === 'live-api' && apiKey) {
+      if (apiKey) {
         try {
           const evaluation = await callOpenAiRubric(text, currentExerciseType, topicText, apiKey);
           renderEvaluation(evaluation);
@@ -450,23 +551,16 @@ async function callOpenAiRubric(text, type, topic, apiKey) {
   "improvements": "Кратко рекомендации по улучшению (2 предложения)"
 }`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3
-    })
+  const raw = await callDebateAI({
+    messages: [
+      { role: "developer", content: "You are a professional debate adjudicator. Return strictly valid JSON." },
+      { role: "user", content: prompt }
+    ],
+    isJson: true,
+    maxTokens: 1000
   });
-
-  if (!response.ok) throw new Error("OpenAI request failed");
-  const data = await response.json();
-  const raw = data.choices[0].message.content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
-  const parsed = JSON.parse(raw);
+  const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+  const parsed = JSON.parse(cleaned);
 
   return {
     overall: parsed.overall,
@@ -1405,7 +1499,7 @@ function initBattleMode() {
       btnRandomTopic.disabled = true;
 
       try {
-        const aiResolution = await generateResolutionWithAI(catKey);
+        const aiResolution = await generateResolutionWithAI(catKey, selectedPersona);
         topicInput.value = aiResolution;
         showToast("Резолюция сгенерирована нейросетью");
       } catch (err) {
@@ -1425,7 +1519,7 @@ function initBattleMode() {
       const labelEl = document.getElementById('btn-generate-topic-label');
       if (labelEl) labelEl.textContent = "Генерация...";
       try {
-        const aiResolution = await generateResolutionWithAI(catKey);
+        const aiResolution = await generateResolutionWithAI(catKey, selectedPersona);
         topicInput.value = aiResolution;
         showToast("Тема обновлена: " + getCategoryName(catKey));
       } catch (_) {
@@ -1830,99 +1924,102 @@ function initTtsToggle() {
   });
 }
 
-function generateFallbackOpeningSpeech(topic) {
-  return `Палата Правительства поддерживает резолюцию: "${topic}". Отсутствие единых норм несет критические риски безопасности. Наше регулирование установит ответственность и защитит общество без ущерба развитию.`;
+function generateFallbackOpeningSpeech(topic, role = 'gov') {
+  if (role === 'gov') {
+    return `Уважаемые судьи, уважаемые оппоненты! Палата Правительства решительно выступает в защиту резолюции: "${topic}".
+В первую очередь мы обращаем внимание на фундаментальную проблему: отсутствие единого нормативного регулирования создает колоссальные риски для общества, безопасности и прав граждан. Когда частные интересы превалируют над общественным благом, невмешательство государства приводит к неконтролируемым кризисам.
+Наш механизм устанавливает прозрачные правила ответственности и гарантии защиты без ущемления инноваций. Сравнительный анализ доказывает: мир с действующими институциональными рамками несоизмеримо безопаснее и стабильнее мира безответственности. Мы призываем коллегию судей поддержать резолюцию!`;
+  } else {
+    return `Уважаемые судьи, уважаемые оппоненты! Палата Оппозиции призывает коллегию судей отклонить резолюцию: "${topic}".
+Наш главный тезис заключается в том, что предложенная Правительством инициатива не решает заявленную проблему, а создает тяжелые побочные эффекты. Чрезмерное государственное вмешательство разрушит здоровую экосистему, создаст искусственные монополии и лишит общество гибкости развития.
+Мы доказываем, что саморегулирование, конкуренция и открытые стандарты обеспечивают баланс интересов намного эффективнее командно-административных запретов. Мы требуем отклонения резолюции!`;
+  }
 }
 
 async function generateAiOpeningSpeech(topic, role = 'gov') {
-  const apiKey = localStorage.getItem('debatr_ai_key') || '';
-  if (!apiKey) return generateFallbackOpeningSpeech(topic);
+  const apiKey = getDebatrApiKey();
+  const roleName = role === 'gov' ? 'Палата Правительства (Премьер-министр)' : 'Палата Оппозиции (Лидер Оппозиции)';
+  const persona = PERSONA_CONFIGS[selectedPersona] || PERSONA_CONFIGS.champion;
 
-  const persona = PERSONA_CONFIGS[selectedPersona] || PERSONA_CONFIGS.novice;
-  const prompt = `Ты спикер дебатов GPT-6 Luna (${role === 'gov' ? 'Палата Правительства' : 'Палата Оппозиции'}).
-Резолюция: "${topic}".
-Стиль: ${persona.stylePrompt || 'убедительный, живой, точный'}.
+  const systemPrompt = `Ты — первоклассный спикер дебатов международного уровня (WUDC / BP), открывающий соревновательный раунд (${roleName}).
+Резолюция раунда: "${topic}".
+Уровень и стиль игры: ${persona.name} — ${persona.stylePrompt}.
 
-Произнеси вступительную речь: емко обозначь ключевой тезис, довод и сравнительный импакт.`;
+ПРАВИЛА И СТРУКТУРА ВСТУПИТЕЛЬНОЙ РЕЧИ:
+1. Выступай строго на русском языке от первого лица спикера твоей палаты («Уважаемые судьи, оппоненты! Наша палата убеждена...»).
+2. Произнеси полноценную, образцовую вступительную речь спикера дебатов (объем 180–260 слов):
+   - Определение бремени доказательства и ключевого тезиса твоей палаты.
+   - 2 мощных, детализированных аргумента с механизмом (Warrant) и реальным воздействием на общество (Impact).
+   - Сравнительный анализ альтернатив: почему ваш мир устойчивее и справедливее мира соперников.
+3. Тон: академичный, убедительный, ораторский. Никаких шаблонных фраз чат-бота! Начинай сразу как оратор дебатов.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_tokens: 120
-      })
+    return await callDebateAI({
+      messages: [{ role: "system", content: systemPrompt }],
+      maxTokens: 1000
     });
-
-    if (!response.ok) return generateFallbackOpeningSpeech(topic);
-    const data = await response.json();
-    return data.choices[0].message.content.trim();
   } catch (err) {
-    return generateFallbackOpeningSpeech(topic);
+    console.warn("AI Opening Speech API error:", err);
+    return generateFallbackOpeningSpeech(topic, role);
   }
 }
 
 async function generateAiOpponentSpeech(userSpeech, topic, userRole) {
-  const opponentRoleName = userRole === 'gov' ? 'Палаты Оппозиции (Отрицание)' : 'Палаты Правительства (Утверждение)';
-  const apiKey = localStorage.getItem('debatr_ai_key') || '';
-  if (!apiKey) return generateFallbackOpponentSpeech(userSpeech, topic, userRole);
+  const opponentRoleName = userRole === 'gov' ? 'Палата Оппозиции (Отрицание)' : 'Палата Правительства (Утверждение)';
+  const userRoleName = userRole === 'gov' ? 'Палата Правительства (Утверждение)' : 'Палата Оппозиции (Отрицание)';
+  const apiKey = getDebatrApiKey();
 
   const persona = PERSONA_CONFIGS[selectedPersona] || PERSONA_CONFIGS.champion;
 
-  const recentDialog = battleDialogueHistory.slice(-4).map(m => (m.role === 'user' ? 'Оппонент: ' : 'GPT-6 Luna: ') + m.text).join('\n');
+  const systemPrompt = `Ты — высококлассный соревновательный спикер дебатов (парламентские форматы WUDC / Британский Парламент / Линкольн-Дуглас), представляющий сторону: ${opponentRoleName}.
+Резолюция раунда: "${topic}".
+Твой оппонент (пользователь) выступает от лица: ${userRoleName}.
+Уровень сложности и стиль игры: ${persona.name} — ${persona.stylePrompt}.
 
-  const prompt = `Ты опытный спикер дебатов GPT-6 Luna (${opponentRoleName}).
-Резолюция: "${topic}".
-Стиль: ${persona.stylePrompt || 'убедительный, живой, точный'}.
+ПРАВИЛА И СТРУКТУРА ТВОЕЙ РЕЧИ:
+1. Выступай строго на русском языке от первого лица спикера твоей палаты («Наша палата утверждает...», «Оппонент допускает критическую ошибку в аргументации...», «Мы доказываем, что в реальном мире...»).
+2. Твоя речь должна быть РАЗВЕРНУТОЙ, сильной, убедительной и ораторски насыщенной (объем 180–260 слов):
+   - ТОЧЕЧНОЕ ОПРОВЕРЖЕНИЕ (Rebuttal): прямо обратись к конкретным аргументам, которые только что высказал соперник. Разбей его причинно-следственную цепочку, вскрой скрытые противоречия или докажи, что его риски/выгоды несоразмерны или нереалистичны.
+   - СОБСТВЕННЫЙ АРГУМЕНТ (Counter-Case / Warrant): выдвини мощный контртезис твоей палаты с логическим механизмом и примерами.
+   - СРАВНИТЕЛЬНЫЙ АНАЛИЗ (Impact & Weighing): покажи судьям, почему ценности твоей стороны (свобода, безопасность, экономическая стабильность или справедливость) перевешивают аргументы соперника.
+3. Тон: острый, интеллектуальный, ораторский, соревновательный. Никаких шаблонных фраз бота (не говори «Здравствуйте», «Как языковая модель» и т.п.). Начинай сразу как оратор дебатов!`;
 
-Аргумент оппонента:
-"${userSpeech}"
+  const messages = [{ role: "system", content: systemPrompt }];
 
-Ответь как дебатер: живо, емко и по существу, сразу парируя аргумент соперника.`;
+  if (battleDialogueHistory && battleDialogueHistory.length > 0) {
+    battleDialogueHistory.slice(-4).forEach(m => {
+      messages.push({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text
+      });
+    });
+  }
+
+  messages.push({
+    role: "user",
+    content: `Речь оппонента (${userRoleName}):\n"${userSpeech}"\n\nПарируй аргумент оппонента и произнеси полноценную турнирную речь дебатера от лица ${opponentRoleName}.`
+  });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_tokens: 160
-      })
+    return await callDebateAI({
+      messages: messages,
+      maxTokens: 1100
     });
-
-    if (!response.ok) return generateFallbackOpponentSpeech(userSpeech, topic, userRole);
-    const data = await response.json();
-    return data.choices[0].message.content.trim();
   } catch (err) {
+    console.error("OpenAI call error in battle:", err);
     return generateFallbackOpponentSpeech(userSpeech, topic, userRole);
   }
 }
 
 function generateFallbackOpponentSpeech(userSpeech, topic, userRole) {
-  if (selectedPersona === 'socrates') {
-    return `Вы требуете ограничений, но на каком объективном критерии они основаны? Без четкой границы регуляция лишь породит произвол чиновников и затормозит поиск истины.`;
-  }
-  if (selectedPersona === 'pragmatist') {
-    return `Это экономически нереализуемо. Бюрократический комплаенс задушит стартапы, а теневые игроки легко обойдут запреты через серые юрисдикции.`;
-  }
-  if (selectedPersona === 'novice') {
-    return `Мы категорически против! Это ограничит свободу пользователей, а технологии и так прекрасно развиваются сами.`;
-  }
   if (userRole === 'gov') {
-    return `Правительство ошибочно считает контроль гарантией безопасности. На деле монополия регуляторов отсечет независимых разработчиков и скроет реальные уязвимости.`;
+    return `Палата Оппозиции решительно отвергает предложенную Правительством инициативу по резолюции "${topic}".
+Во-первых, аргументация Правительства строится на ложной дилемме: предполагается, что единственный путь к решению проблемы — это жесткий централизованный контроль. Однако в реальности введение тотальных ограничений не устранит угрозы, а лишь создаст колоссальные бюрократические барьеры для добросовестных участников и вытеснит инновации в теневой сектор и серые юрисдикции.
+Во-вторых, сравнительный анализ показывает, что издержки предлагаемого регулирования многократно превышают потенциальную пользу. Мы душим технологический рост ради иллюзорного контроля, в то время как конкурентные мировые игроки продолжат ускоренное развитие. Поэтому палата Оппозиции призывает коллегию судей отклонить резолюцию.`;
   } else {
-    return `Оппозиция уповает на саморегуляцию рынка, но рынок пренебрегает рисками ради прибыли. Авиация и медицина доказали: безопасность невозможна без жестких стандартов.`;
+    return `Палата Правительства настаивает на безотлагательном принятии резолюции "${topic}".
+Во-первых, позиция Оппозиции наивно полагается на идеальную саморегуляцию системы. Исторический опыт ядерной безопасности, фармацевтики и авиации наглядно доказывает: в условиях высокой неопределенности и погони за частной выгодой отсутствие строгих стандартов неминуемо ведет к масштабным системным кризисам, за которые расплачивается все общество.
+Во-вторых, мы защищаем фундаментальные интересы граждан и стабильность институтов. Свобода без четких рамок ответственности превращается в произвол монополий. Государственные институты обязаны задавать правила игры до того, как последствия станут необратимыми. Мы требуем утверждения резолюции.`;
   }
 }
 
@@ -2012,7 +2109,7 @@ async function handleBattleJudgeCall() {
 }
 
 async function judgeBattleWithAI(userSpeech, aiSpeech, topic, userRole) {
-  const apiKey = localStorage.getItem('debatr_ai_key') || '';
+  const apiKey = getDebatrApiKey();
   if (!apiKey) return judgeBattleFallback(userSpeech, aiSpeech, userRole);
   const roleTitle = userRole === 'gov' ? 'Правительство' : 'Оппозиция';
 
@@ -2043,23 +2140,21 @@ async function judgeBattleWithAI(userSpeech, aiSpeech, topic, userRole) {
   "advice": "Совет для роста"
 }`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3
-    })
-  });
-
-  if (!response.ok) throw new Error("Judge API failed");
-  const data = await response.json();
-  const raw = data.choices[0].message.content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
-  return JSON.parse(raw);
+  try {
+    const raw = await callDebateAI({
+      messages: [
+        { role: "developer", content: "You are an international chief adjudicator of debate championships. Output strictly valid JSON." },
+        { role: "user", content: prompt }
+      ],
+      isJson: true,
+      maxTokens: 1100
+    });
+    const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.warn("Judge API call failed, using fallback:", err);
+    return judgeBattleFallback(userSpeech, aiSpeech, userRole);
+  }
 }
 
 function judgeBattleFallback(userSpeech, aiSpeech, userRole) {
@@ -2304,7 +2399,14 @@ function initRoomsMode() {
   async function createAndLaunchRoom(config) {
     const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
     const catName = getCategoryName(config.categoryKey);
-    const generatedResolution = getRandomResolutionForCategory(config.categoryKey);
+
+    showToast("ИИ формулирует резолюцию под тему и уровень комнаты...");
+    let generatedResolution = "";
+    try {
+      generatedResolution = await generateResolutionWithAI(config.categoryKey, config.level);
+    } catch (_) {
+      generatedResolution = getRandomResolutionForCategory(config.categoryKey);
+    }
 
     const levelTitles = {
       beginner: 'Начальный',
@@ -2379,44 +2481,62 @@ function initRoomsMode() {
   // 1. Submit from Arena 1v1 Setup Card
   if (btnArenaStartCreate) {
     btnArenaStartCreate.addEventListener('click', async () => {
-      const type = document.querySelector('input[name="arena-cfg-type"]:checked')?.value || 'public';
-      const category = document.getElementById('arena-cfg-category')?.value || 'education';
-      const dateVal = document.getElementById('arena-cfg-date')?.value || '';
-      const timeVal = document.getElementById('arena-cfg-time')?.value || '19:00';
-      const accountName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (currentUser?.email?.split('@')[0] || 'Дебатер');
+      const origText = btnArenaStartCreate.textContent;
+      btnArenaStartCreate.disabled = true;
+      btnArenaStartCreate.textContent = 'ИИ создает резолюцию...';
 
-      let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
-      if (!timeString) timeString = 'Сразу после входа соперника';
+      try {
+        const type = document.querySelector('input[name="arena-cfg-type"]:checked')?.value || 'public';
+        const category = document.getElementById('arena-cfg-category')?.value || 'education';
+        const dateVal = document.getElementById('arena-cfg-date')?.value || '';
+        const timeVal = document.getElementById('arena-cfg-time')?.value || '19:00';
+        const accountName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (currentUser?.email?.split('@')[0] || 'Дебатер');
 
-      await createAndLaunchRoom({
-        roomType: type,
-        categoryKey: category,
-        level: selectedArenaLevel,
-        timeString: timeString,
-        creatorName: accountName
-      });
+        let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
+        if (!timeString) timeString = 'Сразу после входа соперника';
+
+        await createAndLaunchRoom({
+          roomType: type,
+          categoryKey: category,
+          level: selectedArenaLevel,
+          timeString: timeString,
+          creatorName: accountName
+        });
+      } finally {
+        btnArenaStartCreate.disabled = false;
+        btnArenaStartCreate.textContent = origText;
+      }
     });
   }
 
   // 2. Submit from Top Navbar Modal
   if (btnSubmitCreateRoom) {
     btnSubmitCreateRoom.addEventListener('click', async () => {
-      const type = document.querySelector('input[name="modal-room-type"]:checked')?.value || 'public';
-      const category = selectRoomCategory?.value || 'education';
-      const dateVal = inputScheduledDate?.value || '';
-      const timeVal = inputScheduledTime?.value || '19:00';
-      const accountName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (currentUser?.email?.split('@')[0] || 'Дебатер');
+      const origText = btnSubmitCreateRoom.textContent;
+      btnSubmitCreateRoom.disabled = true;
+      btnSubmitCreateRoom.textContent = 'ИИ создает резолюцию...';
 
-      let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
-      if (!timeString) timeString = 'Сразу после входа соперника';
+      try {
+        const type = document.querySelector('input[name="modal-room-type"]:checked')?.value || 'public';
+        const category = selectRoomCategory?.value || 'education';
+        const dateVal = inputScheduledDate?.value || '';
+        const timeVal = inputScheduledTime?.value || '19:00';
+        const accountName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (currentUser?.email?.split('@')[0] || 'Дебатер');
 
-      await createAndLaunchRoom({
-        roomType: type,
-        categoryKey: category,
-        level: selectedModalLevel,
-        timeString: timeString,
-        creatorName: accountName
-      });
+        let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
+        if (!timeString) timeString = 'Сразу после входа соперника';
+
+        await createAndLaunchRoom({
+          roomType: type,
+          categoryKey: category,
+          level: selectedModalLevel,
+          timeString: timeString,
+          creatorName: accountName
+        });
+      } finally {
+        btnSubmitCreateRoom.disabled = false;
+        btnSubmitCreateRoom.textContent = origText;
+      }
     });
   }
 
@@ -3199,7 +3319,7 @@ async function handleJudgeDuel() {
 }
 
 async function judgeDuelWithAI(p1Name, p1Speech, p2Name, p2Speech, topic) {
-  const apiKey = localStorage.getItem('debatr_ai_key') || '';
+  const apiKey = getDebatrApiKey();
   if (!apiKey) return judgeDuelFallback(p1Name, p2Name);
 
   const prompt = `Ты строгий судья дебатного турнира. Оцени матч 1 на 1.
@@ -3226,23 +3346,21 @@ async function judgeDuelWithAI(p1Name, p1Speech, p2Name, p2Speech, topic) {
   }
 }`;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3
-    })
-  });
-
-  if (!response.ok) throw new Error("Duel Judge API failed");
-  const data = await response.json();
-  const raw = data.choices[0].message.content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
-  return JSON.parse(raw);
+  try {
+    const raw = await callDebateAI({
+      messages: [
+        { role: "developer", content: "You are an international debate judge. Return strictly valid JSON." },
+        { role: "user", content: prompt }
+      ],
+      isJson: true,
+      maxTokens: 1200
+    });
+    const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.warn("Duel judge API error, using fallback:", err);
+    return judgeDuelFallback(p1Name, p2Name);
+  }
 }
 
 function judgeDuelFallback(p1Name, p2Name) {
