@@ -1981,11 +1981,14 @@ const SAMPLE_ROOM_SPEECHES = {
 // Only real rooms created by users are shown; no fake mock games
 let activeRoomData = {
   code: "ROOM-842",
+  category: "education",
+  category_name: "Образование и школа",
   topic: "ЭП отменит стандартизированное государственное тестирование в пользу портфолио проектов.",
+  is_revealed: false,
   room_type: "public",
   scheduled_time: "Сегодня в 19:00",
   creator_name: "Ихлас М.",
-  p1_name: "Ихлас М.",
+  p1_name: null,
   p2_name: null,
   status: "waiting"
 };
@@ -2138,7 +2141,7 @@ function initRoomsMode() {
         room_type: selectedType,
         scheduled_time: timeVal,
         creator_name: creatorName,
-        p1_name: creatorName,        // Placed initially, will be randomized on match
+        p1_name: null,               // Determined randomly upon opponent match
         p2_name: null,
         status: 'waiting'
       };
@@ -2404,22 +2407,60 @@ function loadRoomIntoArena(room) {
     timeEl.textContent = room.scheduled_time || "Сразу после сбора";
   }
 
-  if (p1Tag) {
-    p1Tag.textContent = room.p1_name ? room.p1_name : "Ожидает назначения";
-  }
-  if (p1Input && room.p1_name) {
-    p1Input.value = room.p1_name;
-  }
+  const p1RoleBadge = document.getElementById('p1-role-badge');
+  const p2RoleBadge = document.getElementById('p2-role-badge');
+  const chamberBadge1 = document.getElementById('chamber-badge-p1');
+  const chamberBadge2 = document.getElementById('chamber-badge-p2');
 
-  if (p2Tag) {
-    p2Tag.textContent = room.p2_name ? room.p2_name : "Ожидание соперника...";
-  }
-  if (p2Input && room.p2_name) {
-    p2Input.value = room.p2_name;
+  const isMatched = !!(room.p1_name && room.p2_name);
+
+  if (isMatched) {
+    if (p1RoleBadge) {
+      p1RoleBadge.textContent = "Правительство:";
+      p1RoleBadge.className = "pairing-role gov-text";
+    }
+    if (p2RoleBadge) {
+      p2RoleBadge.textContent = "Оппозиция:";
+      p2RoleBadge.className = "pairing-role opp-text";
+    }
+    if (chamberBadge1) {
+      chamberBadge1.textContent = "Правительство";
+      chamberBadge1.className = "chamber-badge gov-badge";
+    }
+    if (chamberBadge2) {
+      chamberBadge2.textContent = "Оппозиция";
+      chamberBadge2.className = "chamber-badge opp-badge";
+    }
+    if (p1Tag) p1Tag.textContent = room.p1_name;
+    if (p1Input) p1Input.value = room.p1_name;
+    if (p2Tag) p2Tag.textContent = room.p2_name;
+    if (p2Input) p2Input.value = room.p2_name;
+  } else {
+    // Waiting for opponent - positions not yet assigned
+    if (p1RoleBadge) {
+      p1RoleBadge.textContent = "Создатель:";
+      p1RoleBadge.className = "pairing-role";
+    }
+    if (p2RoleBadge) {
+      p2RoleBadge.textContent = "Соперник:";
+      p2RoleBadge.className = "pairing-role";
+    }
+    if (chamberBadge1) {
+      chamberBadge1.textContent = "Палата определится жеребьевкой";
+      chamberBadge1.className = "chamber-badge";
+    }
+    if (chamberBadge2) {
+      chamberBadge2.textContent = "Палата определится жеребьевкой";
+      chamberBadge2.className = "chamber-badge";
+    }
+    if (p1Tag) p1Tag.textContent = room.creator_name || "Создатель игры";
+    if (p1Input) p1Input.value = room.creator_name || "";
+    if (p2Tag) p2Tag.textContent = "Ожидание соперника...";
+    if (p2Input) p2Input.value = "";
   }
 
   if (btnClaim) {
-    if (room.p1_name && room.p2_name) {
+    if (isMatched) {
       btnClaim.classList.add('hidden');
     } else {
       btnClaim.classList.remove('hidden');
@@ -2621,12 +2662,12 @@ function renderPublicRoomsGrid() {
 
         <div class="public-room-participants">
           <div class="participant-line">
-            <span class="gov-text">Правительство:</span>
-            <span>${escapeHtml(room.p1_name || 'Свободно')}</span>
+            <span>Создатель:</span>
+            <strong>${escapeHtml(room.creator_name || 'Дебатер')}</strong>
           </div>
           <div class="participant-line">
-            <span class="opp-text">Оппозиция:</span>
-            <span>${escapeHtml(room.p2_name || 'Ожидает отклика')}</span>
+            <span>Соперник:</span>
+            <span>${escapeHtml(room.p2_name || (room.p1_name && room.creator_name !== room.p1_name ? room.p1_name : 'Ожидает отклика'))}</span>
           </div>
         </div>
 

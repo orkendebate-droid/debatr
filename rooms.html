@@ -145,12 +145,12 @@
           <!-- Room Players Status Bar -->
           <div class="room-pairing-bar">
             <div class="pairing-slot" id="slot-p1">
-              <span class="pairing-role gov-text">Правительство:</span>
-              <strong id="p1-display-tag">Ожидание...</strong>
+              <span class="pairing-role" id="p1-role-badge">Спикер 1:</span>
+              <strong id="p1-display-tag">Создатель</strong>
             </div>
             <div class="pairing-vs">VS</div>
             <div class="pairing-slot" id="slot-p2">
-              <span class="pairing-role opp-text">Оппозиция:</span>
+              <span class="pairing-role" id="p2-role-badge">Спикер 2:</span>
               <strong id="p2-display-tag">Ожидание оппонента...</strong>
               <button class="btn-primary btn-xs" id="btn-claim-opp-slot">Откликнуться на игру</button>
             </div>
@@ -159,10 +159,10 @@
 
         <div class="match-duel-grid">
           
-          <!-- Player 1: Government -->
+          <!-- Player 1 -->
           <div class="glass-card player-duel-card">
             <div class="player-duel-header">
-              <span class="chamber-badge gov-badge">Правительство</span>
+              <span class="chamber-badge gov-badge" id="chamber-badge-p1">Правительство</span>
               <input type="text" id="p1-name" class="duel-player-input" value="" placeholder="Спикер 1">
             </div>
             <textarea id="p1-speech" class="speech-textarea duel-textarea" placeholder="Речь премьер-министра..."></textarea>
@@ -172,10 +172,10 @@
             </div>
           </div>
 
-          <!-- Player 2: Opposition -->
+          <!-- Player 2 -->
           <div class="glass-card player-duel-card">
             <div class="player-duel-header">
-              <span class="chamber-badge opp-badge">Оппозиция</span>
+              <span class="chamber-badge opp-badge" id="chamber-badge-p2">Оппозиция</span>
               <input type="text" id="p2-name" class="duel-player-input" value="" placeholder="Спикер 2">
             </div>
             <textarea id="p2-speech" class="speech-textarea duel-textarea" placeholder="Речь лидера оппозиции..."></textarea>
