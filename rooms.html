@@ -100,6 +100,88 @@
       <!-- SECTION 2: MATCH ARENA (The 1v1 battleground) -->
       <div id="section-rooms-arena" class="rooms-section hidden">
         
+        <!-- ROOM SETUP CARD: Configured when clicking 'Арена 1 на 1' -->
+        <div class="glass-card room-setup-card" id="arena-config-card">
+          <div class="room-setup-header">
+            <h3>Настройка комнаты</h3>
+            <span class="text-muted" style="font-size:0.85rem;">Укажите параметры перед началом раунда</span>
+          </div>
+          
+          <div class="room-setup-body">
+            <!-- 1. Room Visibility (Open vs Closed) -->
+            <div class="form-group">
+              <label class="form-label">Тип комнаты:</label>
+              <div class="room-type-toggle">
+                <label class="room-type-option">
+                  <input type="radio" name="arena-cfg-type" value="public" checked>
+                  <div class="room-type-card">
+                    <div class="type-text">
+                      <strong>Открытая</strong>
+                      <span>Видна в общем списке для всех дебатеров</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="room-type-option">
+                  <input type="radio" name="arena-cfg-type" value="private">
+                  <div class="room-type-card">
+                    <div class="type-text">
+                      <strong>Закрытая</strong>
+                      <span>Доступна только по прямой ссылке сопернику</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 2. Topic Category -->
+            <div class="form-group">
+              <label class="form-label" for="arena-cfg-category">Тема / Сфера:</label>
+              <select id="arena-cfg-category" class="form-input form-select">
+                <option value="education">Образование и школа</option>
+                <option value="tech">Технологии и ИИ</option>
+                <option value="ecology">Экология и климат</option>
+                <option value="society">Общество и этика</option>
+                <option value="economics">Экономика и бизнес</option>
+                <option value="politics">Политика и право</option>
+              </select>
+            </div>
+
+            <!-- 3. Skill Level (Начальный, Средний, Высокий) -->
+            <div class="form-group">
+              <label class="form-label">Уровень:</label>
+              <div class="arena-level-pills">
+                <button type="button" class="arena-level-pill-btn active" data-level="beginner">Начальный</button>
+                <button type="button" class="arena-level-pill-btn" data-level="intermediate">Средний</button>
+                <button type="button" class="arena-level-pill-btn" data-level="advanced">Высокий</button>
+              </div>
+            </div>
+
+            <!-- 4. Date & Time -->
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label" for="arena-cfg-date">Дата игры:</label>
+                <input type="date" id="arena-cfg-date" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="arena-cfg-time">Время:</label>
+                <input type="time" id="arena-cfg-time" class="form-input" value="19:00">
+              </div>
+            </div>
+
+            <!-- Creator Name -->
+            <div class="form-group">
+              <label class="form-label" for="arena-cfg-name">Ваше имя:</label>
+              <input type="text" id="arena-cfg-name" class="form-input" placeholder="Имя">
+            </div>
+          </div>
+
+          <div class="room-setup-footer">
+            <button class="btn-primary btn-large" id="btn-arena-start-create">Создать комнату</button>
+          </div>
+        </div>
+
+        <!-- ACTIVE ARENA CONTAINER (Hidden until room is created / joined) -->
+        <div id="arena-active-room-wrapper" class="hidden">
         <div class="glass-card room-meta-card">
           <div class="room-top-row">
             <div class="room-id-badge">
@@ -131,6 +213,7 @@
             <div class="room-topic-header-line">
               <div class="topic-category-badge-box">
                 <span class="topic-category-badge" id="room-category-badge">Образование</span>
+                <span class="badge-lock-info" id="room-level-badge" style="font-size:0.75rem; font-weight:700;">Начальный</span>
                 <span class="resolution-lock-badge" id="room-resolution-status-badge">Скрыта до подготовки</span>
               </div>
               <button class="btn-xs btn-subtle" id="btn-force-reveal-topic" title="Открыть резолюцию">
@@ -276,33 +359,92 @@
           </div>
         </div>
 
+        </div><!-- /#arena-active-room-wrapper -->
+
       </div>
 
     </div>
   </main>
 
-  <!-- Create Room Modal (Open with scheduled time OR Private with QR/Link) -->
+  <!-- Create Room Modal -->
   <div class="modal-overlay hidden" id="create-room-modal">
     <div class="glass-card modal-card room-create-modal">
       <div class="modal-header">
-        <h3>Создание комнаты дебатов</h3>
+        <h3>Настройка комнаты</h3>
         <button class="modal-close" id="btn-close-create-modal">&times;</button>
       </div>
       <div class="modal-body">
         
         <!-- Room Type Selector (Open vs Private) -->
         <div class="form-group">
+          <label class="form-label">Тип комнаты:</label>
+          <div class="room-type-toggle">
+            <label class="room-type-option">
+              <input type="radio" name="modal-room-type" value="public" checked>
+              <div class="room-type-card">
+                <div class="type-text">
+                  <strong>Открытая</strong>
+                  <span>Витрина для соперников</span>
+                </div>
+              </div>
+            </label>
+            <label class="room-type-option">
+              <input type="radio" name="modal-room-type" value="private">
+              <div class="room-type-card">
+                <div class="type-text">
+                  <strong>Закрытая</strong>
+                  <span>Только по прямой ссылке</span>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Topic Category -->
+        <div class="form-group">
+          <label class="form-label" for="select-room-category">Выбор темы / сферы:</label>
+          <select id="select-room-category" class="form-input form-select">
+            <option value="education">Образование и школа</option>
+            <option value="tech">Технологии и ИИ</option>
+            <option value="ecology">Экология и климат</option>
+            <option value="society">Общество и этика</option>
+            <option value="economics">Экономика и бизнес</option>
+            <option value="politics">Политика и право</option>
+          </select>
+        </div>
+
+        <!-- Skill Level -->
+        <div class="form-group">
+          <label class="form-label">Уровень:</label>
+          <div class="arena-level-pills" id="modal-level-pills">
+            <button type="button" class="arena-level-pill-btn active" data-level="beginner">Начальный</button>
+            <button type="button" class="arena-level-pill-btn" data-level="intermediate">Средний</button>
+            <button type="button" class="arena-level-pill-btn" data-level="advanced">Высокий</button>
+          </div>
+        </div>
+
+        <!-- Date & Time -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="input-scheduled-date">Дата игры:</label>
+            <input type="date" id="input-scheduled-date" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-scheduled-time">Время:</label>
+            <input type="time" id="input-scheduled-time" class="form-input" value="19:00">
+          </div>
+        </div>
+
+        <!-- Creator Name -->
+        <div class="form-group">
           <label class="form-label" for="input-creator-name">Ваше имя:</label>
           <input type="text" id="input-creator-name" class="form-input" placeholder="Имя">
         </div>
-        <p class="text-muted" style="font-size:0.85rem; margin-top:0.5rem;">
-          После создания вы получите ссылку для соперника. Когда он зайдет — система выдаст роли, резолюцию и запустит 10 минут на подготовку перед выступлением.
-        </p>
 
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" id="btn-cancel-create-modal">Отмена</button>
-        <button class="btn-primary" id="btn-submit-create-room">Создать и перейти</button>
+        <button class="btn-primary" id="btn-submit-create-room">Создать комнату</button>
       </div>
     </div>
   </div>

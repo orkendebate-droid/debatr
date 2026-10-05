@@ -2029,6 +2029,20 @@ function initRoomsMode() {
       if (tabOpenLobby) tabOpenLobby.classList.remove('active');
       if (sectionArena) sectionArena.classList.remove('hidden');
       if (sectionLobby) sectionLobby.classList.add('hidden');
+
+      // When user clicks 'Арена 1 на 1', if no active match exists, show the setup card
+      const configCard = document.getElementById('arena-config-card');
+      const activeRoomWrap = document.getElementById('arena-active-room-wrapper');
+      const isMatched = activeRoomData && activeRoomData.status === 'matched';
+      const isWaitingCreated = activeRoomData && activeRoomData.status === 'waiting' && activeRoomData.is_user_created;
+
+      if (isMatched || isWaitingCreated) {
+        if (configCard) configCard.classList.add('hidden');
+        if (activeRoomWrap) activeRoomWrap.classList.remove('hidden');
+      } else {
+        if (configCard) configCard.classList.remove('hidden');
+        if (activeRoomWrap) activeRoomWrap.classList.add('hidden');
+      }
     }
   }
 
@@ -2043,6 +2057,28 @@ function initRoomsMode() {
     });
   }
 
+  // Arena Setup level pills selection
+  let selectedArenaLevel = 'beginner';
+  const arenaLevelPills = document.querySelectorAll('.arena-level-pill-btn');
+  arenaLevelPills.forEach(btn => {
+    btn.addEventListener('click', () => {
+      arenaLevelPills.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedArenaLevel = btn.getAttribute('data-level') || 'beginner';
+    });
+  });
+
+  // Modal level pills selection
+  let selectedModalLevel = 'beginner';
+  const modalLevelPills = document.querySelectorAll('#modal-level-pills .arena-level-pill-btn');
+  modalLevelPills.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalLevelPills.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedModalLevel = btn.getAttribute('data-level') || 'beginner';
+    });
+  });
+
   // Create Room Modal controls
   const btnOpenCreateModal = document.getElementById('btn-open-create-room-modal');
   const btnBannerCreate = document.getElementById('btn-banner-create');
@@ -2050,12 +2086,18 @@ function initRoomsMode() {
   const btnCloseCreateModal = document.getElementById('btn-close-create-modal');
   const btnCancelCreateModal = document.getElementById('btn-cancel-create-modal');
   const btnSubmitCreateRoom = document.getElementById('btn-submit-create-room');
-  const btnModalRandomTopic = document.getElementById('btn-modal-random-topic');
-  const inputRoomTopic = document.getElementById('input-room-topic');
-  const inputScheduledTime = document.getElementById('input-scheduled-time');
+  const btnArenaStartCreate = document.getElementById('btn-arena-start-create');
+
   const inputCreatorName = document.getElementById('input-creator-name');
-  const selectCreatorRole = document.getElementById('select-creator-role');
-  const timeQuickBtns = document.querySelectorAll('.time-quick-btn');
+  const selectRoomCategory = document.getElementById('select-room-category');
+  const inputScheduledDate = document.getElementById('input-scheduled-date');
+  const inputScheduledTime = document.getElementById('input-scheduled-time');
+
+  // Set today date as default
+  const todayIso = new Date().toISOString().split('T')[0];
+  if (inputScheduledDate) inputScheduledDate.value = todayIso;
+  const arenaCfgDate = document.getElementById('arena-cfg-date');
+  if (arenaCfgDate) arenaCfgDate.value = todayIso;
 
   // QR Modal controls
   const qrModal = document.getElementById('qr-modal');
@@ -2078,9 +2120,6 @@ function initRoomsMode() {
 
   function openCreateModal() {
     if (!createModal) return;
-    if (inputRoomTopic && !inputRoomTopic.value) {
-      inputRoomTopic.value = DEBATE_TOPICS[Math.floor(Math.random() * DEBATE_TOPICS.length)];
-    }
     if (inputCreatorName && currentUser && currentUser.name && currentUser.name !== 'Гость') {
       inputCreatorName.value = currentUser.name;
     }
@@ -2101,24 +2140,6 @@ function initRoomsMode() {
       if (e.target === createModal) closeCreateModal();
     });
   }
-
-  timeQuickBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (inputScheduledTime) {
-        inputScheduledTime.value = btn.getAttribute('data-time') || '';
-      }
-    });
-  });
-
-  if (btnModalRandomTopic && inputRoomTopic) {
-    btnModalRandomTopic.addEventListener('click', () => {
-      const idx = Math.floor(Math.random() * DEBATE_TOPICS.length);
-      inputRoomTopic.value = DEBATE_TOPICS[idx];
-      showToast("Тема обновлена!");
-    });
-  }
-
-  const selectCategory = document.getElementById('select-room-category');
 
   // Direct link copying in Arena
   const btnCopyArenaLink = document.getElementById('btn-copy-arena-link');
@@ -2141,66 +2162,120 @@ function initRoomsMode() {
     });
   }
 
-  // Handle Create Room submit - Simple creation with direct room link
+  // Helper to construct room and launch arena
+  async function createAndLaunchRoom(config) {
+    const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
+    const catName = getCategoryName(config.categoryKey);
+    const generatedResolution = getRandomResolutionForCategory(config.categoryKey);
+
+    const levelTitles = {
+      beginner: 'Начальный',
+      intermediate: 'Средний',
+      advanced: 'Высокий'
+    };
+    const levelLabel = levelTitles[config.level] || 'Средний';
+
+    const newRoom = {
+      code: code,
+      category: config.categoryKey,
+      category_name: catName,
+      level: config.level,
+      level_label: levelLabel,
+      topic: generatedResolution,
+      is_revealed: false,
+      room_type: config.roomType,
+      scheduled_time: config.timeString || 'Сегодня в 19:00',
+      creator_name: config.creatorName,
+      p1_name: null,
+      p2_name: null,
+      status: 'waiting',
+      is_user_created: true,
+      chat_messages: []
+    };
+
+    // Save to Supabase if configured
+    const supabaseUrl = localStorage.getItem('debatr_supabase_url');
+    const supabaseKey = localStorage.getItem('debatr_supabase_key');
+    if (supabaseUrl && supabaseKey && window.supabase) {
+      try {
+        const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+        await client.from('rooms').insert([{
+          code: newRoom.code,
+          topic: newRoom.topic,
+          room_type: newRoom.room_type,
+          scheduled_time: newRoom.scheduled_time,
+          creator_name: newRoom.creator_name,
+          p1_name: newRoom.p1_name,
+          p2_name: newRoom.p2_name,
+          status: newRoom.status
+        }]);
+      } catch (e) {
+        console.warn("Supabase room creation fallback to local:", e);
+      }
+    }
+
+    // Add to local storage
+    const rooms = getStoredPublicRooms();
+    rooms.unshift(newRoom);
+    saveStoredPublicRooms(rooms);
+
+    activeRoomData = newRoom;
+    closeCreateModal();
+
+    // Show arena active match area and hide setup card
+    const configCard = document.getElementById('arena-config-card');
+    const activeRoomWrap = document.getElementById('arena-active-room-wrapper');
+    if (configCard) configCard.classList.add('hidden');
+    if (activeRoomWrap) activeRoomWrap.classList.remove('hidden');
+
+    loadRoomIntoArena(activeRoomData);
+    showSection('arena');
+
+    const roomUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
+    copyTextToClipboard(roomUrl, `Комната ${code} создана! Ссылка скопирована в буфер.`);
+  }
+
+  // 1. Submit from Arena 1v1 Setup Card
+  if (btnArenaStartCreate) {
+    btnArenaStartCreate.addEventListener('click', async () => {
+      const type = document.querySelector('input[name="arena-cfg-type"]:checked')?.value || 'public';
+      const category = document.getElementById('arena-cfg-category')?.value || 'education';
+      const dateVal = document.getElementById('arena-cfg-date')?.value || '';
+      const timeVal = document.getElementById('arena-cfg-time')?.value || '19:00';
+      const nameVal = (document.getElementById('arena-cfg-name')?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
+
+      let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
+      if (!timeString) timeString = 'Сразу после входа соперника';
+
+      await createAndLaunchRoom({
+        roomType: type,
+        categoryKey: category,
+        level: selectedArenaLevel,
+        timeString: timeString,
+        creatorName: nameVal
+      });
+    });
+  }
+
+  // 2. Submit from Top Navbar Modal
   if (btnSubmitCreateRoom) {
     btnSubmitCreateRoom.addEventListener('click', async () => {
-      const creatorName = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
-      const code = 'ROOM-' + Math.floor(100 + Math.random() * 900);
+      const type = document.querySelector('input[name="modal-room-type"]:checked')?.value || 'public';
+      const category = selectRoomCategory?.value || 'education';
+      const dateVal = inputScheduledDate?.value || '';
+      const timeVal = inputScheduledTime?.value || '19:00';
+      const nameVal = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
 
-      // Random topic resolution prepared in advance
-      const categories = Object.keys(DEBATE_CATEGORIES);
-      const catKey = categories[Math.floor(Math.random() * categories.length)];
-      const catName = getCategoryName(catKey);
-      const generatedResolution = getRandomResolutionForCategory(catKey);
+      let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
+      if (!timeString) timeString = 'Сразу после входа соперника';
 
-      const newRoom = {
-        code: code,
-        category: catKey,
-        category_name: catName,
-        topic: generatedResolution,
-        is_revealed: false,
-        room_type: 'private',
-        scheduled_time: 'Сразу после входа соперника',
-        creator_name: creatorName,
-        p1_name: null,
-        p2_name: null,
-        status: 'waiting',
-        chat_messages: []
-      };
-
-      // Save to Supabase if configured
-      const supabaseUrl = localStorage.getItem('debatr_supabase_url');
-      const supabaseKey = localStorage.getItem('debatr_supabase_key');
-      if (supabaseUrl && supabaseKey && window.supabase) {
-        try {
-          const client = window.supabase.createClient(supabaseUrl, supabaseKey);
-          await client.from('rooms').insert([{
-            code: newRoom.code,
-            topic: newRoom.topic,
-            room_type: newRoom.room_type,
-            scheduled_time: newRoom.scheduled_time,
-            creator_name: newRoom.creator_name,
-            p1_name: newRoom.p1_name,
-            p2_name: newRoom.p2_name,
-            status: newRoom.status
-          }]);
-        } catch (e) {
-          console.warn("Supabase room creation fallback to local:", e);
-        }
-      }
-
-      // Add to local storage
-      const rooms = getStoredPublicRooms();
-      rooms.unshift(newRoom);
-      saveStoredPublicRooms(rooms);
-
-      activeRoomData = newRoom;
-      closeCreateModal();
-      loadRoomIntoArena(activeRoomData);
-      showSection('arena');
-
-      const roomUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
-      copyTextToClipboard(roomUrl, `Комната ${code} создана! Ссылка скопирована в буфер. Отправьте ее сопернику.`);
+      await createAndLaunchRoom({
+        roomType: type,
+        categoryKey: category,
+        level: selectedModalLevel,
+        timeString: timeString,
+        creatorName: nameVal
+      });
     });
   }
 
@@ -2625,8 +2700,24 @@ function loadRoomIntoArena(room) {
   }
 
   if (typeBadge) {
-    typeBadge.textContent = "Комната дебатов";
-    typeBadge.className = "room-privacy-badge private-badge";
+    if (room.room_type === 'private') {
+      typeBadge.textContent = "Закрытая (по ссылке)";
+      typeBadge.className = "room-privacy-badge private-badge";
+    } else {
+      typeBadge.textContent = "Открытая (Витрина)";
+      typeBadge.className = "room-privacy-badge public-badge";
+    }
+  }
+
+  // Level badge
+  const levelBadge = document.getElementById('room-level-badge');
+  if (levelBadge) {
+    const levelMap = {
+      beginner: 'Начальный',
+      intermediate: 'Средний',
+      advanced: 'Высокий'
+    };
+    levelBadge.textContent = levelMap[room.level] || room.level_label || 'Средний';
   }
 
   if (timeEl) {
