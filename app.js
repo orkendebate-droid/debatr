@@ -2242,7 +2242,7 @@ function initRoomsMode() {
       const category = document.getElementById('arena-cfg-category')?.value || 'education';
       const dateVal = document.getElementById('arena-cfg-date')?.value || '';
       const timeVal = document.getElementById('arena-cfg-time')?.value || '19:00';
-      const nameVal = (document.getElementById('arena-cfg-name')?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
+      const accountName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (currentUser?.email?.split('@')[0] || 'Дебатер');
 
       let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
       if (!timeString) timeString = 'Сразу после входа соперника';
@@ -2252,7 +2252,7 @@ function initRoomsMode() {
         categoryKey: category,
         level: selectedArenaLevel,
         timeString: timeString,
-        creatorName: nameVal
+        creatorName: accountName
       });
     });
   }
@@ -2264,7 +2264,7 @@ function initRoomsMode() {
       const category = selectRoomCategory?.value || 'education';
       const dateVal = inputScheduledDate?.value || '';
       const timeVal = inputScheduledTime?.value || '19:00';
-      const nameVal = (inputCreatorName?.value || '').trim() || (currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : 'Дебатер');
+      const accountName = currentUser?.name && currentUser.name !== 'Гость' ? currentUser.name : (currentUser?.email?.split('@')[0] || 'Дебатер');
 
       let timeString = `${dateVal ? dateVal + ' ' : ''}${timeVal}`.trim();
       if (!timeString) timeString = 'Сразу после входа соперника';
@@ -2274,7 +2274,7 @@ function initRoomsMode() {
         categoryKey: category,
         level: selectedModalLevel,
         timeString: timeString,
-        creatorName: nameVal
+        creatorName: accountName
       });
     });
   }
