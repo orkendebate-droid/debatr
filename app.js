@@ -23,6 +23,28 @@ function getDebatrAiModel() {
  * (routed through reasoning model with medium effort and robust fallbacks)
  */
 async function callDebateAI({ messages, isJson = false, maxTokens = 1200 }) {
+  // On Vercel, keep AI_API_KEY server-side and call the serverless proxy.
+  // Local development can still use the optional key saved in this browser.
+  try {
+    const proxyRes = await fetch('/api/debate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, isJson, maxTokens })
+    });
+    if (proxyRes.ok) {
+      const proxyData = await proxyRes.json();
+      if (proxyData.content) return proxyData.content.trim();
+      throw new Error('AI proxy returned an empty response');
+    }
+    if (proxyRes.status !== 404 && proxyRes.status !== 405) {
+      const errorData = await proxyRes.json().catch(() => ({}));
+      throw new Error(errorData.error || `AI proxy failed: ${proxyRes.status}`);
+    }
+  } catch (err) {
+    // A missing API route is expected when running the static files locally.
+    if (err.message && !/Failed to fetch|NetworkError|fetch failed/i.test(err.message)) throw err;
+  }
+
   const apiKey = getDebatrApiKey();
   if (!apiKey) throw new Error("No API key available");
 
@@ -1708,9 +1730,12 @@ async function handleBattleSubmit() {
 
   // 3. Generate Opponent Speech (via live API or smart local generator)
   let aiSpeech = "";
+  let usedFallback = false;
   try {
     aiSpeech = await generateAiOpponentSpeech(text, topicText, battleUserRole);
   } catch (e) {
+    console.error("Battle opponent is using local fallback:", e);
+    usedFallback = true;
     aiSpeech = generateFallbackOpponentSpeech(text, topicText, battleUserRole);
   }
 
@@ -1718,6 +1743,11 @@ async function handleBattleSubmit() {
   const thinkingEl = document.getElementById(thinkingId);
   if (thinkingEl) thinkingEl.remove();
   appendBattleMessage(oppChamberTitle, aiSpeech, 'msg-ai');
+  if (usedFallback) {
+    showToast(getDebatrApiKey()
+      ? "ИИ недоступен: показан упрощённый ответ. Проверьте ключ и подключение."
+      : "Нет ключа OpenAI: показан упрощённый ответ. Добавьте ключ в настройках.", 6000);
+  }
   battleAiSpeechText = aiSpeech;
   battleDialogueHistory.push({ role: 'luna', text: aiSpeech });
 
@@ -1986,8 +2016,9 @@ async function generateAiOpponentSpeech(userSpeech, topic, userRole) {
 
   const messages = [{ role: "system", content: systemPrompt }];
 
-  if (battleDialogueHistory && battleDialogueHistory.length > 0) {
-    battleDialogueHistory.slice(-4).forEach(m => {
+  if (battleDialogueHistory && battleDialogueHistory.length > 1) {
+    // The latest user speech is supplied below with an explicit rebuttal task.
+    battleDialogueHistory.slice(0, -1).slice(-4).forEach(m => {
       messages.push({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.text
@@ -2007,20 +2038,17 @@ async function generateAiOpponentSpeech(userSpeech, topic, userRole) {
     });
   } catch (err) {
     console.error("OpenAI call error in battle:", err);
-    return generateFallbackOpponentSpeech(userSpeech, topic, userRole);
+    throw err;
   }
 }
 
 function generateFallbackOpponentSpeech(userSpeech, topic, userRole) {
+  const claim = String(userSpeech || '').replace(/\s+/g, ' ').trim();
+  const excerpt = claim.length > 240 ? `${claim.slice(0, 237)}…` : claim;
   if (userRole === 'gov') {
-    return `Палата Оппозиции решительно отвергает предложенную Правительством инициативу по резолюции "${topic}".
-Во-первых, аргументация Правительства строится на ложной дилемме: предполагается, что единственный путь к решению проблемы — это жесткий централизованный контроль. Однако в реальности введение тотальных ограничений не устранит угрозы, а лишь создаст колоссальные бюрократические барьеры для добросовестных участников и вытеснит инновации в теневой сектор и серые юрисдикции.
-Во-вторых, сравнительный анализ показывает, что издержки предлагаемого регулирования многократно превышают потенциальную пользу. Мы душим технологический рост ради иллюзорного контроля, в то время как конкурентные мировые игроки продолжат ускоренное развитие. Поэтому палата Оппозиции призывает коллегию судей отклонить резолюцию.`;
-  } else {
-    return `Палата Правительства настаивает на безотлагательном принятии резолюции "${topic}".
-Во-первых, позиция Оппозиции наивно полагается на идеальную саморегуляцию системы. Исторический опыт ядерной безопасности, фармацевтики и авиации наглядно доказывает: в условиях высокой неопределенности и погони за частной выгодой отсутствие строгих стандартов неминуемо ведет к масштабным системным кризисам, за которые расплачивается все общество.
-Во-вторых, мы защищаем фундаментальные интересы граждан и стабильность институтов. Свобода без четких рамок ответственности превращается в произвол монополий. Государственные институты обязаны задавать правила игры до того, как последствия станут необратимыми. Мы требуем утверждения резолюции.`;
+    return `Палата Оппозиции оспаривает речь Правительства по резолюции «${topic}».\nВы утверждаете: «${excerpt}». Но описание риска ещё не доказывает, что именно предложенная резолюция его устранит. Правительству нужно показать причинную связь между мерой и результатом и объяснить, почему менее ограничительный способ не сработает. Иначе аргумент перескакивает от наличия проблемы к оправданию конкретного решения.\nСудьям следует проверить сам механизм: кто будет применять правило, как избежать ошибок и кто понесёт цену побочных последствий? Если регулирование вытеснит добросовестных участников или сконцентрирует власть у контролёров, оно способно усилить исходную проблему. Пока эффективность и соразмерность меры не доказаны, палата Оппозиции призывает отклонить резолюцию.`;
   }
+  return `Палата Правительства отвечает на речь Оппозиции по резолюции «${topic}».\nВы утверждаете: «${excerpt}». Однако критика издержек сама по себе не показывает, что отказ от резолюции безопаснее. Оппозиции нужно назвать работающую альтернативу и объяснить, почему она справится с проблемой лучше. Если оставить действующие стимулы без изменений, риск, о котором говорит Правительство, сохранится.\nМы признаём, что вмешательство тоже имеет цену. Судьям нужно сравнить последствия обоих миров и проверить, можно ли снизить побочные эффекты точной настройкой механизма. Простого перечисления неудобств недостаточно, чтобы снять бремя доказательства с Оппозиции. Пока её альтернатива не показана как эффективная, предотвращение системного вреда важнее сохранения статус-кво. Палата Правительства поддерживает резолюцию.`;
 }
 
 async function handleBattleJudgeCall() {
