@@ -2583,4 +2583,97 @@ body {
   color: #ffffff;
 }
 
+/* Keep the active AI debate comfortable on wide screens and usable on phones. */
+#battle-active-view {
+  min-width: 0;
+}
+
+.battle-chat-fullscreen,
+.battle-feed,
+.battle-msg-card {
+  min-width: 0;
+}
+
+.battle-feed {
+  min-height: clamp(300px, 48vh, 520px);
+  max-height: min(62vh, 680px);
+  overscroll-behavior: contain;
+}
+
+.battle-msg-card,
+.active-topic-heading {
+  overflow-wrap: anywhere;
+}
+
+.battle-textarea {
+  min-height: clamp(120px, 20vh, 220px);
+}
+
+@media (max-width: 640px) {
+  .main-container {
+    margin-top: 1rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .active-round-bar {
+    padding: 0.9rem;
+  }
+
+  .round-bar-top,
+  .round-bar-actions {
+    align-items: stretch;
+  }
+
+  .round-bar-top {
+    flex-direction: column;
+  }
+
+  .round-bar-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #btn-finish-battle-early {
+    grid-column: 1 / -1;
+  }
+
+  .debate-timer-bar {
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+
+  .debate-timer-bar > div:first-child {
+    flex-wrap: wrap;
+  }
+
+  .timer-controls > button {
+    flex: 1;
+  }
+
+  .battle-feed {
+    min-height: 280px;
+    max-height: 55vh;
+    padding: 0.75rem;
+  }
+
+  .battle-input-card {
+    padding: 0.85rem;
+  }
+
+  .battle-actions-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .battle-actions-row > div {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #btn-battle-submit {
+    width: 100%;
+  }
+}
+
 

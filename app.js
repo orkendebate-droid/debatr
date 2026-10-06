@@ -159,7 +159,7 @@ const DEBATE_CATEGORIES = {
       "ЭП считает, что развитие автономных систем искусственного интеллекта должно жестко лицензироваться международным регулятором.",
       "ЭП запретит разработку и внедрение систем социального кредита и алгоритмического скоринга граждан.",
       "ЭП считает, что социальные сети несут прямую юридическую ответственность за вредоносный контент и дезинформацию.",
-      "ЭП признает авторские права на контент, созданный генеративным ИИ, общественным достоянием."
+      "ЭП установит обязательное лицензирование разработчиков генеративных моделей искусственного интеллекта."
     ]
   },
   economy: {
@@ -206,11 +206,6 @@ function getRandomResolutionForCategory(categoryKey) {
 async function generateResolutionWithAI(categoryKey, level = 'intermediate') {
   const normKey = categoryKey === 'tech' ? 'ai_tech' : (categoryKey === 'economics' ? 'economy' : categoryKey);
   const catName = getCategoryName(normKey);
-  const apiKey = getDebatrApiKey();
-
-  if (!apiKey) {
-    return getRandomResolutionForCategory(normKey);
-  }
 
   const levelDescriptions = {
     beginner: 'Начальный уровень (ясная, жизненная тема для новичков и школьников, понятный конфликт без узкоспециализированных терминов)',
@@ -234,7 +229,8 @@ async function generateResolutionWithAI(categoryKey, level = 'intermediate') {
 ТРЕБОВАНИЯ:
 1. Резолюция ОБЯЗАТЕЛЬНО должна начинаться со слова "ЭП" (Эта Палата), например: "ЭП запретит...", "ЭП обяжет...", "ЭП считает, что...", "ЭП предоставит...".
 2. Тема должна идеально соответствовать уровню сложности (${levelText}) и иметь сильные равнозначные позиции как за Правительство, так и за Оппозицию.
-3. Не пиши вводных слов, номеров, вариантов или кавычек. Выведи строго только саму резолюцию.`;
+3. Не пиши вводных слов, номеров, вариантов или кавычек. Выведи строго только саму резолюцию.
+4. Не упоминай, что тема сгенерирована ИИ; не добавляй метакомментарии о процессе создания.`;
 
   try {
     const raw = await callDebateAI({
@@ -1523,12 +1519,12 @@ function initBattleMode() {
       try {
         const aiResolution = await generateResolutionWithAI(catKey, selectedPersona);
         topicInput.value = aiResolution;
-        showToast("Резолюция сгенерирована нейросетью");
+        showToast("Новая резолюция готова");
       } catch (err) {
         topicInput.value = getRandomResolutionForCategory(catKey);
         showToast("Тема обновлена");
       } finally {
-        if (labelEl) labelEl.textContent = "Сгенерировать ИИ";
+        if (labelEl) labelEl.textContent = "Сгенерировать резолюцию";
         btnRandomTopic.disabled = false;
       }
     });
@@ -1547,7 +1543,7 @@ function initBattleMode() {
       } catch (_) {
         topicInput.value = getRandomResolutionForCategory(catKey);
       } finally {
-        if (labelEl) labelEl.textContent = "Сгенерировать ИИ";
+        if (labelEl) labelEl.textContent = "Сгенерировать резолюцию";
       }
     });
   }
@@ -1672,6 +1668,14 @@ function initBattleMode() {
 
   if (btnBattleSubmit) {
     btnBattleSubmit.addEventListener('click', handleBattleSubmit);
+  }
+  if (battleSpeechInput) {
+    battleSpeechInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+        event.preventDefault();
+        if (btnBattleSubmit && !btnBattleSubmit.disabled) handleBattleSubmit();
+      }
+    });
   }
 
     if (btnFinishEarly) {
